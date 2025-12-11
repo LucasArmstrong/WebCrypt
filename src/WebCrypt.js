@@ -55,7 +55,7 @@ export class WebCrypt {
     return key;
   }
 
-   // ────────────────────── Safe Base64 (stack-safe, fast) ──────────────────────
+  // ────────────────────── Safe Base64 (stack-safe, fast) ──────────────────────
   _arrayBufferToBase64(buffer) {
     let binary = "";
     const bytes = new Uint8Array(buffer);
@@ -80,8 +80,8 @@ export class WebCrypt {
   async encryptText(text, password) {
     const data = new TextEncoder().encode(text);
     const salt = crypto.getRandomValues(new Uint8Array(WebCrypt.SALT_LENGTH));
-    const iv   = crypto.getRandomValues(new Uint8Array(WebCrypt.IV_LENGTH));
-    const key  = await this._deriveKey(password, salt);
+    const iv = crypto.getRandomValues(new Uint8Array(WebCrypt.IV_LENGTH));
+    const key = await this._deriveKey(password, salt);
 
     const encrypted = await crypto.subtle.encrypt({ name: WebCrypt.ALGORITHM, iv }, key, data);
 
@@ -100,11 +100,15 @@ export class WebCrypt {
     }
 
     const salt = combined.slice(0, WebCrypt.SALT_LENGTH);
-    const iv   = combined.slice(WebCrypt.SALT_LENGTH, WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH);
+    const iv = combined.slice(WebCrypt.SALT_LENGTH, WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH);
     const ciphertext = combined.slice(WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH);
 
     const key = await this._deriveKey(password, salt);
-    const decrypted = await crypto.subtle.decrypt({ name: WebCrypt.ALGORITHM, iv }, key, ciphertext);
+    const decrypted = await crypto.subtle.decrypt(
+      { name: WebCrypt.ALGORITHM, iv },
+      key,
+      ciphertext
+    );
     return new TextDecoder().decode(decrypted);
   }
 
