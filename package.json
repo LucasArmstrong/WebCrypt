@@ -1,0 +1,83 @@
+{
+  "name": "webcrypt",
+  "version": "0.0.1",
+  "description": "Zero-dependency quantum-resistant AES-256-GCM encryption for text, files & WebRTC E2EE",
+  "main": "index.js",
+  "module": "src/WebCrypt.js",
+  "types": "src/WebCrypt.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/WebCrypt.js",
+      "require": "./index.js",
+      "types": "./src/WebCrypt.d.ts"
+    }
+  },
+  "files": [
+    "src",
+    "index.js"
+  ],
+  "keywords": [
+    "encryption",
+    "aes-gcm",
+    "webrtc",
+    "e2ee",
+    "file-encryption",
+    "quantum-resistant"
+  ],
+  "author": "Lucas Armstrong",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lucasarmstrong/webcrypt.git"
+  },
+  "homepage": "https://github.com/lucasarmstrong/webcrypt",
+  "bugs": {
+    "url": "https://github.com/lucasarmstrong/webcrypt/issues"
+  },
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "format": "prettier --write \"**/*.{js,ts,json,md}\"",
+    "format:check": "prettier --check \"**/*.{js,ts,json,md}\"",
+    "lint": "npm run format:check",
+    "prepublishOnly": "npm test && npm run format:check",
+    "publish": "npm publish --access public"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"],
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/**/*.d.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 100,
+        "functions": 100,
+        "lines": 100,
+        "statements": 100
+      }
+    }
+  },
+  "prettier": {
+    "semi": true,
+    "trailingComma": "es5",
+    "singleQuote": false,
+    "printWidth": 100,
+    "tabWidth": 2,
+    "useTabs": false,
+    "arrowParens": "avoid"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "prettier": "^3.7.4",
+    "ts-jest": "^29.4.6"
+  }
+}
