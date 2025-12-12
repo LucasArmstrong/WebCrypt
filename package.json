@@ -1,6 +1,6 @@
 {
   "name": "webcrypt",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Zero-dependency quantum-resistant AES-256-GCM encryption for text, files & WebRTC E2EE",
   "main": "index.js",
   "module": "src/WebCrypt.js",
@@ -74,12 +74,5 @@
     "tabWidth": 2,
     "useTabs": false,
     "arrowParens": "avoid"
-  },
-  "devDependencies": {
-    "@types/jest": "^30.0.0",
-    "jest": "^30.2.0",
-    "jest-environment-jsdom": "^30.2.0",
-    "prettier": "^3.7.4",
-    "ts-jest": "^29.4.6"
   }
 }
