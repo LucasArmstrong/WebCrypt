@@ -45,7 +45,7 @@ describe("WebCrypt – Full Test Suite", () => {
     expect(filename).toBe("secret.txt.encrypted");
 
     const { blob: decryptedBlob, filename: originalName } = await wc.decryptFile(blob, PASSWORD);
-    expect(originalName).toBe("decrypted");
+    expect(originalName).toBe("secret.txt");
 
     const result = await decryptedBlob.text();
     expect(result).toBe(TEXT);
@@ -76,7 +76,7 @@ describe("WebCrypt – Full Test Suite", () => {
       (await wc.encryptFile(file, PASSWORD)).blob,
       PASSWORD
     );
-    expect(restored).toBe("decrypted");
+    expect(restored).toBe("my résumé.pdf");
   });
 
   // WebRTC transforms (smoke test – checks function shape)

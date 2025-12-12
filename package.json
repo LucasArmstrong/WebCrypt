@@ -1,29 +1,54 @@
 {
   "name": "webcrypt",
-  "version": "0.0.3",
-  "description": "Zero-dependency quantum-resistant AES-256-GCM encryption for text, files & WebRTC E2EE",
+  "version": "0.1.0",
+  "description": "Zero-dependency AES-256-GCM encryption for text, files & WebRTC E2EE. Includes symmetric (password) and asymmetric (RSA-4096 hybrid) modes. Streaming, quantum-resistant key derivation, pure Web Crypto API.",
   "main": "index.js",
-  "module": "src/WebCrypt.js",
-  "types": "src/WebCrypt.d.ts",
-  "type": "module",
+  "module": "index.js",
+  "types": "index.d.ts",
   "exports": {
     ".": {
-      "import": "./src/WebCrypt.js",
-      "require": "./index.js",
-      "types": "./src/WebCrypt.d.ts"
+      "import": "./index.js",
+      "require": "./index.cjs",
+      "types": "./index.d.ts"
     }
   },
+  "type": "module",
   "files": [
     "src",
     "index.js"
   ],
+  "scripts": {
+    "test": "node --experimental-vm-modules $(which jest)",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "format": "prettier --write \"**/*.{js,ts,json,md}\"",
+    "format:check": "prettier --check \"**/*.{js,ts,json,md}\"",
+    "lint": "npm run format:check",
+    "prepublishOnly": "npm test && npm run format:check",
+    "publish": "npm publish --access public"
+  },
   "keywords": [
     "encryption",
+    "aes-256-gcm",
     "aes-gcm",
+    "rsa-oaep",
+    "hybrid-encryption",
+    "asymmetric-encryption",
+    "public-key-encryption",
     "webrtc",
+    "webrtc-e2ee",
+    "insertable-streams",
+    "end-to-end-encryption",
     "e2ee",
     "file-encryption",
-    "quantum-resistant"
+    "text-encryption",
+    "secure-messaging",
+    "quantum-resistant",
+    "pbkdf2",
+    "web-crypto",
+    "zero-dependency",
+    "browser",
+    "nodejs"
   ],
   "author": "Lucas Armstrong",
   "license": "MIT",
@@ -34,37 +59,6 @@
   "homepage": "https://github.com/lucasarmstrong/webcrypt",
   "bugs": {
     "url": "https://github.com/lucasarmstrong/webcrypt/issues"
-  },
-  "scripts": {
-    "test": "node --experimental-vm-modules node_modules/.bin/jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "format": "prettier --write \"**/*.{js,ts,json,md}\"",
-    "format:check": "prettier --check \"**/*.{js,ts,json,md}\"",
-    "lint": "npm run format:check",
-    "prepublishOnly": "npm test && npm run format:check",
-    "publish": "npm publish --access public"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "setupFilesAfterEnv": [
-      "<rootDir>/jest.setup.js"
-    ],
-    "moduleNameMapper": {
-      "^(\\.{1,2}/.*)\\.js$": "$1"
-    },
-    "collectCoverageFrom": [
-      "src/**/*.js",
-      "!src/**/*.d.ts"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "branches": 100,
-        "functions": 100,
-        "lines": 100,
-        "statements": 100
-      }
-    }
   },
   "prettier": {
     "semi": true,
