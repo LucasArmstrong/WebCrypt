@@ -1,6 +1,6 @@
 {
   "name": "webcrypt",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Zero-dependency quantum-resistant AES-256-GCM encryption for text, files & WebRTC E2EE",
   "main": "index.js",
   "module": "src/WebCrypt.js",
