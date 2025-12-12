@@ -1,5 +1,2 @@
-// index.js
-const { WebCrypt } = require("./src/WebCrypt.js");
-const { WebCryptAsym } = require("./src/WebCryptAsym.js");
-
-module.exports = { WebCrypt, WebCryptAsym };
+export { WebCrypt } from "./src/WebCrypt.js";
+export { WebCryptAsym } from "./src/WebCryptAsym.js";
