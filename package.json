@@ -1,23 +1,52 @@
 {
   "name": "webcrypt",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Zero-dependency AES-256-GCM encryption for text, files & WebRTC E2EE. Includes symmetric (password) and asymmetric (RSA-4096 hybrid) modes. Streaming, quantum-resistant key derivation, pure Web Crypto API.",
-  "main": "./src/WebCrypt.js",
-  "module": "index.js",
-  "types": "index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./index.js",
-      "require": "./index.cjs",
-      "types": "./index.d.ts"
-    }
-  },
   "type": "module",
   "files": [
-    "src",
-    "index.js"
+    "dist"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "browser": "./dist/index.js",
+      "module": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js"
+    },
+    "./webcrypt": {
+      "types": "./dist/WebCrypt.d.ts",
+      "import": "./dist/WebCrypt.js",
+      "browser": "./dist/WebCrypt.js",
+      "module": "./dist/WebCrypt.js",
+      "require": "./dist/WebCrypt.cjs",
+      "default": "./dist/WebCrypt.js"
+    },
+    "./webcrypt-asym": {
+      "types": "./dist/WebCryptAsym.d.ts",
+      "import": "./dist/WebCryptAsym.js",
+      "browser": "./dist/WebCryptAsym.js",
+      "module": "./dist/WebCryptAsym.js",
+      "require": "./dist/WebCryptAsym.cjs",
+      "default": "./dist/WebCryptAsym.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist/*.d.ts"
+      ],
+      "webcrypt": [
+        "dist/WebCrypt.d.ts"
+      ],
+      "webcrypt-asym": [
+        "dist/WebCryptAsym.d.ts"
+      ]
+    }
+  },
   "scripts": {
+    "build": "tsup src/index.js src/WebCrypt.js src/WebCryptAsym.js --format esm,cjs --dts --clean --no-splitting",
     "test": "node --experimental-vm-modules $(which jest)",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -68,5 +97,11 @@
     "tabWidth": 2,
     "useTabs": false,
     "arrowParens": "avoid"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "prettier": "^3.7.4",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
   }
 }

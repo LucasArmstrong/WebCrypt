@@ -13,9 +13,11 @@ npm install webcrypt
 ```
 
 ```js
-import { WebCrypt, WebCryptAsym } from "webcrypt";
+import { WebCrypt } from "webcrypt";
+import { WebCryptAsym } from "webcrypt";
 
 const wc = new WebCrypt();
+const wca = new WebCryptAsym();
 ```
 
 Works in: Browser • Node.js • React • Angular • Next.js • Vue • Svelte • Electron • Deno • Cloudflare Workers
@@ -34,35 +36,6 @@ Works in: Browser • Node.js • React • Angular • Next.js • Vue • Svel
 | Key caching                 | Done   | Same password = instant reuse         |
 | TypeScript support          | Done   | Full .d.ts included                   |
 | Asymmetric version          | Done   | See WebCryptAsym below                |
-
-#### New: WebCryptAsym – Asymmetric Encryption
-
-webcrypt now includes WebCryptAsym, a full asymmetric counterpart using hybrid RSA-4096-OAEP + AES-256-GCM encryption.  
-Perfect when you need public/private key pairs instead of shared passwords (e.g., secure file sharing, messaging apps).
-
-```js
-import { WebCryptAsym } from "webcrypt";
-
-const crypt = new WebCryptAsym();
-
-// Generate key pair
-const keyPair = await crypt.generateKeyPair();
-const publicKeyB64 = await crypt.exportPublicKey(keyPair.publicKey);
-const privateKeyB64 = await crypt.exportPrivateKey(keyPair.privateKey);
-
-// Encrypt with recipient's public key
-const encrypted = await crypt.encryptText("Secret", recipientPublicKey);
-
-// Decrypt with your private key
-const decrypted = await crypt.decryptText(encrypted, myPrivateKey);
-```
-
-Supports the same features as the symmetric version:  
-Text encryption/decryption  
-Streaming file encryption (.asym-encrypted extension)  
-WebRTC insertable streams (session key encrypted in first frame)
-
-See full documentation and examples in the WebCryptAsym section below.
 
 #### Installation
 
