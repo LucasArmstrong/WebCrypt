@@ -1,11 +1,12 @@
 # webcrypt
 
-**Zero-dependency • Strong End-to-End Encryption for the Modern Web**  
+**Zero-dependency • Strong End-to-End Encryption for the Modern Web (Updated 2025)**  
 Pure Web Crypto API-powered **AES-256-GCM** symmetric encryption + full **RSA-4096 hybrid asymmetric** mode.  
-Securely encrypt **text**, **multi-gigabyte files** (streaming), and **real-time WebRTC video/audio** — all with no shared passwords required in asymmetric mode.
+Now includes ECDSA digital signatures (P-256/P-384) for authenticity, detached file signing, and streaming-friendly signing workflows.
 
 - Password-based symmetric encryption (WebCrypt) – simple, fast, perfect for shared-secret scenarios
 - Public/private key asymmetric encryption (WebCryptAsym) – true public-key cryptography for messaging & file sharing
+- Digital signatures (WebCryptAsym) – ECDSA sign/verify for text and files
 - Zero dependencies • Works offline • Browser + Node.js • Quantum-resistant key derivation
 
 ```bash
@@ -30,6 +31,7 @@ Works in: Browser • Node.js • React • Angular • Next.js • Vue • Svel
 | File encryption             | Done   | Streaming — handles 10 GB+ files      |
 | File decryption             | Done   | Restores original filename            |
 | WebRTC E2EE (video + audio) | Done   | Insertable Streams — true end-to-end  |
+| Digital signatures          | Done   | ECDSA (P-256/P-384) sign & verify     |
 | Zero dependencies           | Done   | Pure Web Crypto API                   |
 | Node.js 18+ support         | Done   | Native crypto.webcrypto               |
 | Strong key derivation       | Done   | 600k PBKDF2 iterations + random salts |
@@ -37,15 +39,23 @@ Works in: Browser • Node.js • React • Angular • Next.js • Vue • Svel
 | TypeScript support          | Done   | Full .d.ts included                   |
 | Asymmetric version          | Done   | See WebCryptAsym below                |
 
-#### Installation
+#### What's new (2025)
 
-```bash
-npm install webcrypt
-# or
-yarn add webcrypt
-# or
-pnpm add webcrypt
-```
+- ECDSA digital signatures added (WebCryptAsym): signText/verifyText, signFile/verifyFile, export/import signing keys.
+- Streaming-safe base64 utilities and improved file header formats for robust large-file handling.
+- Documentation & examples expanded for asymmetric signing and WebRTC hybrid key exchange.
+
+#### Library overview
+
+- WebCrypt (symmetric)
+  - Password-based AES-256-GCM encryption (PBKDF2 600k iterations).
+  - Streaming file encryption with counter-derived IVs for low memory usage.
+  - WebRTC Insertable Stream transforms derived from a shared password.
+- WebCryptAsym (asymmetric + signing)
+  - RSA-4096 hybrid: RSA-OAEP encrypts ephemeral AES-256-GCM session keys; AES encrypts payloads.
+  - ECDSA (P-256 / P-384) signing for text and files (detached signatures).
+  - Streaming file handling and WebRTC hybrid key exchange (session key in first frame).
+  - Export/import helpers for public/private keys (base64 SPKI/PKCS8).
 
 #### Symmetric Usage (WebCrypt)
 
@@ -144,6 +154,33 @@ const { blob: decryptedBlob, filename: originalName } = await crypt.decryptFile(
 );
 ```
 
+##### Signing & Verifying (ECDSA)
+
+```js
+// Generate a signing key pair (ECDSA)
+const { publicKey, privateKey, publicKeyB64 } = await crypt.generateSigningKeyPair("P-256");
+
+// Share publicKeyB64 with verifiers, keep privateKey safe
+
+// Sign a short message
+const message = "I approve transaction #123";
+const signatureB64 = await crypt.signText(message, privateKey);
+
+// Verify the message
+const ok = await crypt.verifyText(message, signatureB64, publicKey);
+// ok === true
+
+// Sign a file (detached signature)
+const { signatureB64: fileSig } = await crypt.signFile(myLargeFile, privateKey);
+
+// Verify a file later
+const valid = await crypt.verifyFile(myLargeFile, fileSig, publicKey);
+// valid === true
+
+// Import a verifier's public signing key (SPKI base64)
+const verifierPub = await crypt.importPublicSigningKey(publicKeyB64, "P-256");
+```
+
 WebRTC transforms also available (session key sent encrypted in first frame).
 
 #### API
@@ -182,6 +219,14 @@ crypt.decryptFile(file: File|Blob, privateKey: CryptoKey): Promise<{ blob: Blob,
 
 crypt.createEncryptTransform(publicKey: CryptoKey): Promise<TransformFunction>
 crypt.createDecryptTransform(privateKey: CryptoKey): Promise<TransformFunction>
+
+-- Signing / Verification (ECDSA) --
+crypt.generateSigningKeyPair(curve?: 'P-256' | 'P-384'): Promise<{ publicKey, privateKey, publicKeyB64 }>
+crypt.importPublicSigningKey(publicKeyB64: string, curve?: string): Promise<CryptoKey>
+crypt.signText(text: string, privateKey: CryptoKey): Promise<string>
+crypt.verifyText(text: string, signatureB64: string, publicKey: CryptoKey): Promise<boolean>
+crypt.signFile(file: File|Blob, privateKey: CryptoKey): Promise<{signatureB64: string, blob: Blob}>
+crypt.verifyFile(file: File|Blob, signatureB64: string, publicKey: CryptoKey): Promise<boolean>
 ```
 
 #### Security
@@ -191,6 +236,7 @@ crypt.createDecryptTransform(privateKey: CryptoKey): Promise<TransformFunction>
 - Unique 128-bit salt per message/file
 - Unique 96-bit IV per chunk/frame
 - No keys ever leave your device
+- ECDSA (P-256/P-384) for signatures — compact and widely supported
 - AES-256 offers strong protection even against future quantum threats (Grover-resistant at this key size)
 
 #### Browser Support
