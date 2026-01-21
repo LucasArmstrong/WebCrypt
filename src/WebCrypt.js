@@ -228,4 +228,69 @@ export class WebCrypt {
       controller.enqueue(frame);
     };
   }
+
+  /**
+   * Generates or derives an HMAC key.
+   * @param {string} [password] Optional password for PBKDF2 derivation (if provided, uses 600_000 iterations like existing ops).
+   * @param {string} [hash='SHA-256'] Hash algorithm.
+   * @returns {Promise<CryptoKey>} Usable HMAC key.
+   */
+  async generateHmacKey(password, hash = "SHA-256") {
+    let keyMaterial;
+
+    if (password) {
+      // Derive from password using PBKDF2, mirroring existing symmetric key derivation
+      const salt = crypto.getRandomValues(new Uint8Array(16)); // 128-bit salt
+      const pbkdf2Params = {
+        name: "PBKDF2",
+        salt,
+        iterations: 600_000,
+        hash: "SHA-256",
+      };
+      const baseKey = await crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode(password),
+        { name: "PBKDF2" },
+        false,
+        ["deriveBits", "deriveKey"]
+      );
+      keyMaterial = await crypto.subtle.deriveBits(pbkdf2Params, baseKey, 256); // 256-bit key
+    } else {
+      // Generate random key if no password
+      keyMaterial = crypto.getRandomValues(new Uint8Array(32)); // 256-bit random key
+    }
+
+    return crypto.subtle.importKey(
+      "raw",
+      keyMaterial,
+      { name: "HMAC", hash },
+      true, // Exportable for storage if needed
+      ["sign", "verify"]
+    );
+  }
+
+  /**
+   * Computes HMAC on data.
+   * @param {string|ArrayBuffer} data Text or ArrayBuffer to authenticate.
+   * @param {CryptoKey} key HMAC key from generateHmacKey.
+   * @returns {Promise<string>} Base64-encoded HMAC tag.
+   */
+  async computeHmac(data, key) {
+    const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
+    const signature = await crypto.subtle.sign("HMAC", key, dataBuffer);
+    return btoa(String.fromCharCode(...new Uint8Array(signature))); // Base64 encode, consistent with existing outputs
+  }
+
+  /**
+   * Verifies HMAC on data.
+   * @param {string|ArrayBuffer} data Text or ArrayBuffer to verify.
+   * @param {string} hmac Base64-encoded HMAC tag to check.
+   * @param {CryptoKey} key HMAC key.
+   * @returns {Promise<boolean>} True if valid.
+   */
+  async verifyHmac(data, hmac, key) {
+    const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
+    const signatureBuffer = Uint8Array.from(atob(hmac), c => c.charCodeAt(0));
+    return crypto.subtle.verify("HMAC", key, signatureBuffer, dataBuffer);
+  }
 }

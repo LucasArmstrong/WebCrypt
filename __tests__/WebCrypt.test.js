@@ -102,4 +102,13 @@ describe("WebCrypt – Full Test Suite", () => {
     // (this test is more for coverage + future-proofing)
     expect(true).toBe(true);
   });
+
+  test("HMAC computation and verification", async () => {
+    const wc = new WebCrypt();
+    const key = await wc.generateHmacKey("testpass");
+    const data = "Test data";
+    const hmac = await wc.computeHmac(data, key);
+    expect(await wc.verifyHmac(data, hmac, key)).toBe(true);
+    expect(await wc.verifyHmac("Tampered data", hmac, key)).toBe(false);
+  });
 });

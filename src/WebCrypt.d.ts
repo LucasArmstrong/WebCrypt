@@ -7,6 +7,7 @@
  * - Text encryption/decryption
  * - Large file encryption/decryption (streaming)
  * - WebRTC Insertable Streams E2EE (video + audio)
+ * - HMAC for message authentication
  *
  * Works in Browser, Node.js 18+, Deno, Cloudflare Workers
  */
@@ -84,6 +85,31 @@ declare class WebCrypt {
       controller: TransformStreamDefaultController
     ) => Promise<void>
   >;
+
+  /**
+   * Generates or derives an HMAC key.
+   * @param password Optional password for PBKDF2 derivation (if provided, uses 600_000 iterations).
+   * @param hash Hash algorithm (default: 'SHA-256').
+   * @returns Usable HMAC key.
+   */
+  generateHmacKey(password?: string, hash?: "SHA-256" | "SHA-384" | "SHA-512"): Promise<CryptoKey>;
+
+  /**
+   * Computes HMAC on data.
+   * @param data Text or ArrayBuffer to authenticate.
+   * @param key HMAC key from generateHmacKey.
+   * @returns Base64-encoded HMAC tag.
+   */
+  computeHmac(data: string | ArrayBuffer, key: CryptoKey): Promise<string>;
+
+  /**
+   * Verifies HMAC on data.
+   * @param data Text or ArrayBuffer to verify.
+   * @param hmac Base64-encoded HMAC tag to check.
+   * @param key HMAC key.
+   * @returns True if valid.
+   */
+  verifyHmac(data: string | ArrayBuffer, hmac: string, key: CryptoKey): Promise<boolean>;
 }
 
 /**

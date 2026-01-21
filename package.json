@@ -1,7 +1,7 @@
 {
   "name": "webcrypt",
-  "version": "0.3.0",
-  "description": "Zero-dependency AES-256-GCM encryption for text, files & WebRTC E2EE. Includes symmetric (password) and asymmetric (RSA-4096 hybrid) modes. Streaming, quantum-resistant key derivation, pure Web Crypto API.",
+  "version": "0.4.0",
+  "description": "Zero-dependency JavaScript-based AES-256-GCM encryption for text, files & WebRTC E2EE. Includes symmetric (password) and asymmetric (RSA-4096 hybrid) modes. Streaming, quantum-resistant key derivation, pure Web Crypto API.",
   "type": "module",
   "files": [
     "dist"
@@ -77,7 +77,8 @@
     "web-crypto",
     "zero-dependency",
     "browser",
-    "nodejs"
+    "nodejs",
+    "hmac"
   ],
   "author": "Lucas Armstrong",
   "license": "MIT",

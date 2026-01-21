@@ -8,6 +8,7 @@ Now includes ECDSA digital signatures (P-256/P-384) for authenticity, detached f
 - Public/private key asymmetric encryption (WebCryptAsym) – true public-key cryptography for messaging & file sharing
 - Digital signatures (WebCryptAsym) – ECDSA sign/verify for text and files
 - Zero dependencies • Works offline • Browser + Node.js • Quantum-resistant key derivation
+- Symmetric message authentication (WebCrypt) – HMAC (SHA-256/384/512) for verifying integrity and authenticity of messages or data
 
 ```bash
 npm install webcrypt
@@ -181,7 +182,23 @@ const valid = await crypt.verifyFile(myLargeFile, fileSig, publicKey);
 const verifierPub = await crypt.importPublicSigningKey(publicKeyB64, "P-256");
 ```
 
-WebRTC transforms also available (session key sent encrypted in first frame).
+#### HMAC Support
+
+Compute and verify message authentication codes using HMAC-SHA-256 (or other hashes).
+
+```js
+const { WebCrypt } = require("webcrypt"); // or import for ES modules
+const wc = new WebCrypt();
+
+// Generate key from password
+const key = await wc.generateHmacKey("strongpassword");
+
+// Compute HMAC
+const hmac = await wc.computeHmac("Important message", key);
+
+// Verify
+const isValid = await wc.verifyHmac("Important message", hmac, key); // true
+```
 
 #### API
 
