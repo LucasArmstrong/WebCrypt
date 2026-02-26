@@ -1,4 +1,5 @@
 // src/WebCryptAsym.js
+// version: 0.4.1
 export class WebCryptAsym {
   // Constants for RSA-4096 hybrid encryption
   // RSA provides strong classical security against current factoring attacks

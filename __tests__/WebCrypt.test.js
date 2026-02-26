@@ -111,4 +111,25 @@ describe("WebCrypt – Full Test Suite", () => {
     expect(await wc.verifyHmac(data, hmac, key)).toBe(true);
     expect(await wc.verifyHmac("Tampered data", hmac, key)).toBe(false);
   });
+
+  test("handles empty strings", async () => {
+    const encrypted = await wc.encryptText("", PASSWORD);
+    const decrypted = await wc.decryptText(encrypted, PASSWORD);
+    expect(decrypted).toBe("");
+  });
+
+  test("handles special characters and unicode", async () => {
+    const specialText = "Hello 🚀 世界! @#$%^&*()_+{}|:\"<>?[]\\;',./";
+    const encrypted = await wc.encryptText(specialText, PASSWORD);
+    const decrypted = await wc.decryptText(encrypted, PASSWORD);
+    expect(decrypted).toBe(specialText);
+  });
+
+  test("handles very large text strings (memory safety)", async () => {
+    // Test with a moderately large string to verify memory usage
+    const largeText = "A".repeat(100000); // ~100KB string - more reasonable for tests
+    const encrypted = await wc.encryptText(largeText, PASSWORD);
+    const decrypted = await wc.decryptText(encrypted, PASSWORD);
+    expect(decrypted).toBe(largeText);
+  });
 });

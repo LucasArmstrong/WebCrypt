@@ -1,4 +1,5 @@
 // src/WebCrypt.js
+// version: 0.4.1
 export class WebCrypt {
   // AES-256-GCM: Provides 128-bit effective security against Grover's quantum algorithm
   //   - Authenticated encryption mode preventing tampering and ensuring integrity

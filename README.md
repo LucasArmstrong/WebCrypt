@@ -188,7 +188,8 @@ const verifierPub = await crypt.importPublicSigningKey(publicKeyB64, "P-256");
 Compute and verify message authentication codes using HMAC-SHA-256 (or other hashes).
 
 ```js
-const { WebCrypt } = require("webcrypt"); // or import for ES modules
+import { WebCrypt } from "webcrypt";
+
 const wc = new WebCrypt();
 
 // Generate key from password
@@ -199,6 +200,19 @@ const hmac = await wc.computeHmac("Important message", key);
 
 // Verify
 const isValid = await wc.verifyHmac("Important message", hmac, key); // true
+```
+
+You can also use different hash algorithms:
+
+```js
+// Generate HMAC key with SHA-384
+const key384 = await wc.generateHmacKey("strongpassword", "SHA-384");
+
+// Compute HMAC with SHA-384
+const hmac384 = await wc.computeHmac("Important message", key384);
+
+// Verify with SHA-384
+const isValid384 = await wc.verifyHmac("Important message", hmac384, key384); // true
 ```
 
 #### API
