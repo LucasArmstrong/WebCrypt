@@ -1,6 +1,6 @@
 # webcrypt
 
-**Zero-dependency • Strong End-to-End Encryption for the Modern Web (Updated 2025)**  
+**Zero-dependency • Strong End-to-End Encryption for the Modern Web (v0.4.1)**  
 Pure Web Crypto API-powered **AES-256-GCM** symmetric encryption + full **RSA-4096 hybrid asymmetric** mode.  
 Now includes ECDSA digital signatures (P-256/P-384) for authenticity, detached file signing, and streaming-friendly signing workflows.
 
@@ -40,11 +40,12 @@ Works in: Browser • Node.js • React • Angular • Next.js • Vue • Svel
 | TypeScript support          | Done   | Full .d.ts included                   |
 | Asymmetric version          | Done   | See WebCryptAsym below                |
 
-#### What's new (2025)
+#### What's new (v0.4.1)
 
 - ECDSA digital signatures added (WebCryptAsym): signText/verifyText, signFile/verifyFile, export/import signing keys.
 - Streaming-safe base64 utilities and improved file header formats for robust large-file handling.
 - Documentation & examples expanded for asymmetric signing and WebRTC hybrid key exchange.
+- Improved TypeScript support and type definitions.
 
 #### Library overview
 
@@ -205,39 +206,51 @@ const isValid = await wc.verifyHmac("Important message", hmac, key); // true
 ##### Symmetric (WebCrypt)
 
 ```ts
-const wc = new WebCrypt()
+const wc = new WebCrypt();
 
+// Text encryption/decryption
 wc.encryptText(text: string, password: string): Promise<string>
 wc.decryptText(b64: string, password: string): Promise<string>
 
+// File encryption/decryption
 wc.encryptFile(file: File|Blob, password: string): Promise<{ blob: Blob, filename: string }>
 wc.decryptFile(file: File|Blob, password: string): Promise<{ blob: Blob, filename: string }>
 
+// WebRTC transforms
 wc.createEncryptTransform(password: string): Promise<TransformFunction>
 wc.createDecryptTransform(password: string): Promise<TransformFunction>
+
+// HMAC support
+wc.generateHmacKey(password: string): Promise<CryptoKey>
+wc.computeHmac(message: string, key: CryptoKey): Promise<string>
+wc.verifyHmac(message: string, hmac: string, key: CryptoKey): Promise<boolean>
 ```
 
 ##### Asymmetric (WebCryptAsym)
 
 ```ts
-const crypt = new WebCryptAsym()
+const crypt = new WebCryptAsym();
 
+// Key generation and import/export
 crypt.generateKeyPair(): Promise<CryptoKeyPair>
 crypt.exportPublicKey(publicKey: CryptoKey): Promise<string>
 crypt.exportPrivateKey(privateKey: CryptoKey): Promise<string>
 crypt.importPublicKey(b64: string): Promise<CryptoKey>
 crypt.importPrivateKey(b64: string): Promise<CryptoKey>
 
+// Text encryption/decryption
 crypt.encryptText(text: string, publicKey: CryptoKey): Promise<string>
 crypt.decryptText(b64: string, privateKey: CryptoKey): Promise<string>
 
+// File encryption/decryption
 crypt.encryptFile(file: File|Blob, publicKey: CryptoKey): Promise<{ blob: Blob, filename: string }>
 crypt.decryptFile(file: File|Blob, privateKey: CryptoKey): Promise<{ blob: Blob, filename: string }>
 
+// WebRTC transforms
 crypt.createEncryptTransform(publicKey: CryptoKey): Promise<TransformFunction>
 crypt.createDecryptTransform(privateKey: CryptoKey): Promise<TransformFunction>
 
--- Signing / Verification (ECDSA) --
+// Signing / Verification (ECDSA)
 crypt.generateSigningKeyPair(curve?: 'P-256' | 'P-384'): Promise<{ publicKey, privateKey, publicKeyB64 }>
 crypt.importPublicSigningKey(publicKeyB64: string, curve?: string): Promise<CryptoKey>
 crypt.signText(text: string, privateKey: CryptoKey): Promise<string>
@@ -266,13 +279,15 @@ All support Web Crypto API + Insertable Streams.
 Works natively in Node.js 18+ via built-in crypto.webcrypto.
 
 ```js
-const { WebCrypt } = require("webcrypt");
+const { WebCrypt } = require("webcrypt"); // CommonJS
+// or
+import { WebCrypt } from "webcrypt"; // ES Modules
 ```
 
 #### License
 
 MIT License — free for personal and commercial use  
-© 2025 Lucas Armstrong  
+© 2026 Lucas Armstrong  
 https://github.com/lucasarmstrong/webcrypt
 
 No telemetry. No servers. No backdoors.  
