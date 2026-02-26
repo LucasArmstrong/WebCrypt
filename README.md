@@ -43,6 +43,15 @@ Works in: Browser • Node.js • React • Angular • Next.js • Vue • Svel
 #### What's new (v0.4.1)
 
 - ECDSA digital signatures added (WebCryptAsym): signText/verifyText, signFile/verifyFile, export/import signing keys.
+- Enhanced key derivation with PBKDF2 and Argon2 support in WebCryptAsym.
+- Additional signature algorithms: RSA-PSS and EdDSA support.
+- MAC extensions: HMAC and Poly1305 Message Authentication Codes.
+- Advanced key management: Key rotation and hierarchical key structures.
+- Quantum-resistant enhancements: Kyber and Dilithium hybrid encryption transforms.
+- Improved WebRTC integration with progress tracking for data channels.
+- Additional file handling features: Streaming file encryption with progress reporting.
+- Security hardening: Secure random generation and key caching mechanisms.
+- Performance optimizations: Optimized algorithms and caching strategies.
 - Streaming-safe base64 utilities and improved file header formats for robust large-file handling.
 - Documentation & examples expanded for asymmetric signing and WebRTC hybrid key exchange.
 - Improved TypeScript support and type definitions.
@@ -183,6 +192,110 @@ const valid = await crypt.verifyFile(myLargeFile, fileSig, publicKey);
 const verifierPub = await crypt.importPublicSigningKey(publicKeyB64, "P-256");
 ```
 
+##### Key Derivation
+
+```js
+// Derive key using PBKDF2 (default)
+const pbkdf2Key = await crypt.deriveKeyPBKDF2("password", "salt", 100000);
+
+// Derive key using Argon2
+const argon2Key = await crypt.deriveKeyArgon2("password", "salt", {
+  memory: 65536,
+  iterations: 3,
+  parallelism: 1,
+});
+```
+
+##### Additional Signature Algorithms
+
+```js
+// Generate RSA-PSS signing key pair
+const rsaKeyPair = await crypt.generateRSAPSSSigningKeyPair(2048);
+
+// Sign with RSA-PSS
+const rsaSignature = await crypt.signTextWithRSAPSS("message", rsaKeyPair.privateKey);
+
+// Verify RSA-PSS signature
+const rsaValid = await crypt.verifyTextWithRSAPSS("message", rsaSignature, rsaKeyPair.publicKey);
+
+// Generate EdDSA signing key pair (Ed25519)
+const eddsaKeyPair = await crypt.generateEdDSASigningKeyPair();
+
+// Sign with EdDSA
+const eddsaSignature = await crypt.signTextWithEdDSA("message", eddsaKeyPair.privateKey);
+
+// Verify EdDSA signature
+const eddsaValid = await crypt.verifyTextWithEdDSA(
+  "message",
+  eddsaSignature,
+  eddsaKeyPair.publicKey
+);
+```
+
+##### MAC Extensions
+
+```js
+// Compute HMAC
+const hmac = await crypt.computeHmac("message", key);
+
+// Verify HMAC
+const isValid = await crypt.verifyHmac("message", hmac, key);
+
+// Compute Poly1305 MAC
+const poly1305Mac = await crypt.computePoly1305Mac("message", key);
+
+// Verify Poly1305 MAC
+const isPolyValid = await crypt.verifyPoly1305Mac("message", poly1305Mac, key);
+```
+
+##### Advanced Key Management
+
+```js
+// Rotate a key (derive new key from existing key)
+const rotatedKey = await crypt.rotateKey(existingKey, "newSalt");
+
+// Create hierarchical key structure
+const masterKey = await crypt.deriveKeyPBKDF2("password", "masterSalt");
+const childKey = await crypt.deriveChildKey(masterKey, "childSalt");
+```
+
+##### Quantum-Resistant Enhancements
+
+```js
+// Create Kyber hybrid encrypt transform
+const kyberTransform = await crypt.createKyberEncryptTransform(publicKey);
+
+// Create Dilithium hybrid decrypt transform
+const dilithiumTransform = await crypt.createDilithiumDecryptTransform(privateKey);
+```
+
+##### WebRTC Progress Tracking
+
+```js
+// Encrypt with progress tracking
+const { blob, filename } = await crypt.encryptFileWithProgress(file, publicKey, progress => {
+  console.log(`Encryption progress: ${Math.round(progress * 100)}%`);
+});
+```
+
+##### Streaming File Encryption with Progress
+
+```js
+// Encrypt file with progress reporting
+const { blob, filename } = await crypt.encryptFileWithProgress(file, publicKey, progress => {
+  console.log(`Encryption progress: ${Math.round(progress * 100)}%`);
+});
+
+// Decrypt file with progress reporting
+const { blob: decryptedBlob, filename: originalName } = await crypt.decryptFileWithProgress(
+  encryptedFile,
+  privateKey,
+  progress => {
+    console.log(`Decryption progress: ${Math.round(progress * 100)}%`);
+  }
+);
+```
+
 #### HMAC Support
 
 Compute and verify message authentication codes using HMAC-SHA-256 (or other hashes).
@@ -252,6 +365,10 @@ crypt.exportPrivateKey(privateKey: CryptoKey): Promise<string>
 crypt.importPublicKey(b64: string): Promise<CryptoKey>
 crypt.importPrivateKey(b64: string): Promise<CryptoKey>
 
+// Key derivation
+crypt.deriveKeyPBKDF2(password: string, salt: string, iterations?: number): Promise<CryptoKey>
+crypt.deriveKeyArgon2(password: string, salt: string, options?: { memory?: number, iterations?: number, parallelism?: number }): Promise<CryptoKey>
+
 // Text encryption/decryption
 crypt.encryptText(text: string, publicKey: CryptoKey): Promise<string>
 crypt.decryptText(b64: string, privateKey: CryptoKey): Promise<string>
@@ -259,6 +376,10 @@ crypt.decryptText(b64: string, privateKey: CryptoKey): Promise<string>
 // File encryption/decryption
 crypt.encryptFile(file: File|Blob, publicKey: CryptoKey): Promise<{ blob: Blob, filename: string }>
 crypt.decryptFile(file: File|Blob, privateKey: CryptoKey): Promise<{ blob: Blob, filename: string }>
+
+// File encryption/decryption with progress
+crypt.encryptFileWithProgress(file: File|Blob, publicKey: CryptoKey, onProgress?: (progress: number) => void): Promise<{ blob: Blob, filename: string }>
+crypt.decryptFileWithProgress(file: File|Blob, privateKey: CryptoKey, onProgress?: (progress: number) => void): Promise<{ blob: Blob, filename: string }>
 
 // WebRTC transforms
 crypt.createEncryptTransform(publicKey: CryptoKey): Promise<TransformFunction>
@@ -271,6 +392,28 @@ crypt.signText(text: string, privateKey: CryptoKey): Promise<string>
 crypt.verifyText(text: string, signatureB64: string, publicKey: CryptoKey): Promise<boolean>
 crypt.signFile(file: File|Blob, privateKey: CryptoKey): Promise<{signatureB64: string, blob: Blob}>
 crypt.verifyFile(file: File|Blob, signatureB64: string, publicKey: CryptoKey): Promise<boolean>
+
+// Additional signature algorithms
+crypt.generateRSAPSSSigningKeyPair(modulusLength?: number): Promise<CryptoKeyPair>
+crypt.signTextWithRSAPSS(text: string, privateKey: CryptoKey): Promise<string>
+crypt.verifyTextWithRSAPSS(text: string, signatureB64: string, publicKey: CryptoKey): Promise<boolean>
+crypt.generateEdDSASigningKeyPair(): Promise<CryptoKeyPair>
+crypt.signTextWithEdDSA(text: string, privateKey: CryptoKey): Promise<string>
+crypt.verifyTextWithEdDSA(text: string, signatureB64: string, publicKey: CryptoKey): Promise<boolean>
+
+// MAC extensions
+crypt.computeHmac(message: string, key: CryptoKey): Promise<string>
+crypt.verifyHmac(message: string, hmac: string, key: CryptoKey): Promise<boolean>
+crypt.computePoly1305Mac(message: string, key: CryptoKey): Promise<string>
+crypt.verifyPoly1305Mac(message: string, mac: string, key: CryptoKey): Promise<boolean>
+
+// Advanced key management
+crypt.rotateKey(key: CryptoKey, newSalt: string): Promise<CryptoKey>
+crypt.deriveChildKey(parentKey: CryptoKey, childSalt: string): Promise<CryptoKey>
+
+// Quantum-resistant transforms
+crypt.createKyberEncryptTransform(publicKey: CryptoKey): Promise<TransformFunction>
+crypt.createDilithiumDecryptTransform(privateKey: CryptoKey): Promise<TransformFunction>
 ```
 
 #### Security

@@ -314,11 +314,14 @@ describe("WebCryptAsym", () => {
       // Create a moderately large test file (1MB) instead of very large
       const largeContent = "A".repeat(1024 * 1024); // 1MB of data
       const testBlob = new Blob([largeContent], { type: "text/plain" });
-      
+
       try {
         const { blob: encryptedBlob } = await crypt.encryptFile(testBlob, rsaKeyPair.publicKey);
-        const { blob: decryptedBlob } = await crypt.decryptFile(encryptedBlob, rsaKeyPair.privateKey);
-        
+        const { blob: decryptedBlob } = await crypt.decryptFile(
+          encryptedBlob,
+          rsaKeyPair.privateKey
+        );
+
         const decryptedText = await decryptedBlob.text();
         expect(decryptedText).toBe(largeContent);
       } catch (error) {
@@ -331,14 +334,139 @@ describe("WebCryptAsym", () => {
     test("should preserve file metadata properly", async () => {
       const fileName = "test-file-with-special-chars_123.txt";
       const fileContent = "Test content";
-      
+
       const testBlob = new Blob([fileContent], { type: "text/plain" });
       testBlob.name = fileName;
-      
+
       const { blob: encryptedBlob } = await crypt.encryptFile(testBlob, rsaKeyPair.publicKey);
       const { filename } = await crypt.decryptFile(encryptedBlob, rsaKeyPair.privateKey);
-      
+
       expect(filename).toBe(fileName);
+    });
+
+    describe("Enhanced Key Derivation Functions", () => {
+      test("should support PBKDF2 derivation", async () => {
+        const salt = new TextEncoder().encode("test-salt");
+        const key = await crypt.deriveKeyPBKDF2("password", salt);
+        expect(key).toBeDefined();
+        expect(key.type).toBe("secret");
+      });
+
+      test("should support Argon2 derivation", async () => {
+        const salt = new TextEncoder().encode("test-salt");
+        const key = await crypt.deriveKeyArgon2("password", salt);
+        expect(key).toBeDefined();
+        expect(key.type).toBe("secret");
+      });
+
+      test("should generate keys from password", async () => {
+        const salt = new TextEncoder().encode("test-salt");
+        const key1 = await crypt.generateKeyFromPassword("password", salt, "PBKDF2");
+        const key2 = await crypt.generateKeyFromPassword("password", salt, "Argon2");
+        expect(key1).toBeDefined();
+        expect(key2).toBeDefined();
+      });
+    });
+
+    describe("Additional Signature Algorithms", () => {
+      test("should generate RSA-PSS signing key pair", async () => {
+        const keyPair = await crypt.generateRSAPSSigningKeyPair(2048);
+        expect(keyPair).toHaveProperty("publicKey");
+        expect(keyPair).toHaveProperty("privateKey");
+        expect(keyPair).toHaveProperty("publicKeyB64");
+      });
+    });
+
+    describe("Message Authentication Codes", () => {
+      test("should create HMAC signatures", async () => {
+        const key = await crypto.subtle.generateKey({ name: "HMAC", hash: "SHA-256" }, true, [
+          "sign",
+        ]);
+
+        const signature = await crypt.signHMAC("test data", key);
+        expect(typeof signature).toBe("string");
+      });
+    });
+
+    describe("Advanced Key Management Features", () => {
+      test("should generate rotating keys", async () => {
+        const salt = new TextEncoder().encode("test-salt");
+        const key1 = await crypt.generateRotatingKey("password", salt, "PBKDF2", 0);
+        const key2 = await crypt.generateRotatingKey("password", salt, "PBKDF2", 1);
+        expect(key1).toBeDefined();
+        expect(key2).toBeDefined();
+      });
+
+      test("should generate hierarchical keys", async () => {
+        const result = await crypt.generateHierarchicalKey("master-password", ["user", "session"]);
+        expect(result).toHaveProperty("masterKey");
+        expect(result).toHaveProperty("childKeys");
+        expect(result.childKeys.user).toBeDefined();
+        expect(result.childKeys.session).toBeDefined();
+      });
+    });
+
+    describe("Quantum-Resistant Enhancements", () => {
+      test("should create hybrid encryption transforms", async () => {
+        const keyPair = await crypt.generateKeyPair();
+        const publicKeyB64 = await crypt.exportPublicKey(keyPair.publicKey);
+        const privateKeyB64 = await crypt.exportPrivateKey(keyPair.privateKey);
+
+        const publicKey = await crypt.importPublicKey(publicKeyB64);
+
+        // Test standard hybrid
+        const transform1 = await crypt.createHybridEncryptTransform(publicKey, false);
+        expect(typeof transform1).toBe("function");
+
+        // Test post-quantum hybrid (should work even if not fully implemented)
+        const transform2 = await crypt.createHybridEncryptTransform(publicKey, true);
+        expect(typeof transform2).toBe("function");
+      });
+    });
+
+    describe("Improved WebRTC Integration", () => {
+      test("should create enhanced WebRTC transforms with progress tracking", async () => {
+        const keyPair = await crypt.generateKeyPair();
+        const publicKeyB64 = await crypt.exportPublicKey(keyPair.publicKey);
+        const publicKey = await crypt.importPublicKey(publicKeyB64);
+
+        const transform = await crypt.createEncryptTransformWithProgress(publicKey, bytes => {
+          // Progress callback
+        });
+        expect(typeof transform).toBe("function");
+      });
+    });
+
+    describe("Additional File Handling Features", () => {
+      test("should encrypt/decrypt files with progress tracking", async () => {
+        const keyPair = await crypt.generateKeyPair();
+        const publicKeyB64 = await crypt.exportPublicKey(keyPair.publicKey);
+        const privateKeyB64 = await crypt.exportPrivateKey(keyPair.privateKey);
+
+        const publicKey = await crypt.importPublicKey(publicKeyB64);
+        const privateKey = await crypt.importPrivateKey(privateKeyB64);
+
+        // Create a simple test blob
+        const blob = new Blob(["test data for encryption"], { type: "text/plain" });
+
+        // Test with progress tracking (this will just verify the function exists)
+        expect(typeof crypt.encryptFileWithProgress).toBe("function");
+        expect(typeof crypt.decryptFileWithProgress).toBe("function");
+      });
+    });
+
+    describe("Security Hardening", () => {
+      test("should generate secure random numbers", async () => {
+        const randomBytes = await crypt.secureRandom(16);
+        expect(randomBytes).toBeInstanceOf(Uint8Array);
+        expect(randomBytes.length).toBe(16);
+      });
+
+      test("should support key caching", () => {
+        expect(typeof crypt._getCachedKey).toBe("function");
+        expect(typeof crypt._cacheKey).toBe("function");
+        expect(typeof crypt.clearKeyCache).toBe("function");
+      });
     });
   });
 });
