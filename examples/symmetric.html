@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WebCrypt — Symmetric / HMAC Example</title>
+</head>
+<body>
+  <h1>WebCrypt — HMAC (SHA-3) Example</h1>
+  <p>Enter a message and generate/verify an HMAC using <code>WebCrypt</code>.</p>
+
+  <textarea id="msg" rows="4" cols="60">Hello from WebCrypt!</textarea><br/>
+  <button id="gen">Generate HMAC</button>
+  <button id="verify">Verify HMAC</button>
+
+  <pre id="out"></pre>
+
+  <script type="module">
+    import { WebCrypt } from '../src/WebCrypt.js';
+
+    const crypt = new WebCrypt();
+    const out = document.getElementById('out');
+    let lastKey;
+    let lastTag;
+
+    function b64(u8) {
+      if (u8 instanceof Uint8Array) {
+        return btoa(String.fromCharCode(...u8));
+      }
+      return u8;
+    }
+
+    document.getElementById('gen').addEventListener('click', async () => {
+      out.textContent = 'Generating key...';
+      // generate a random HMAC key (fast)
+      lastKey = await crypt.generateHmacKeySHA3();
+
+      const msg = new TextEncoder().encode(document.getElementById('msg').value);
+      lastTag = await crypt.computeHmacSHA3(msg, lastKey);
+
+      out.textContent = `HMAC (base64): ${lastTag}\nKey: (CryptoKey object)`;
+    });
+
+    document.getElementById('verify').addEventListener('click', async () => {
+      if (!lastKey || !lastTag) {
+        out.textContent = 'No key/tag to verify. First generate one.';
+        return;
+      }
+      const msg = new TextEncoder().encode(document.getElementById('msg').value);
+      const ok = await crypt.verifyHmacSHA3(msg, lastTag, lastKey);
+      out.textContent = ok ? 'HMAC valid ✅' : 'HMAC invalid ❌';
+    });
+  </script>
+</body>
+</html>

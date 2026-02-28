@@ -1,5 +1,5 @@
 // src/WebCryptAsym.js
-// version: 0.4.1
+// version: 0.5.0
 export class WebCryptAsym {
   // Constants for RSA-4096 hybrid encryption
   // RSA provides strong classical security against current factoring attacks
@@ -1273,5 +1273,312 @@ export class WebCryptAsym {
     const dummy = new Uint8Array(100);
     crypto.getRandomValues(dummy);
     throw new Error(message);
+  }
+
+  // ════════════════════════════ Post-Quantum Features ════════════════════════════
+
+  /**
+   * Enhanced Argon2id key derivation (stronger against GPU/ASIC attacks than PBKDF2).
+   * Provides quantum-resistant key stretching with tuned parameters for 2025+.
+   *
+   * @param {string} password - Password to derive from
+   * @param {Uint8Array} salt - Random salt (recommended: 16+ bytes)
+   * @param {Object} options - Argon2 configuration
+   * @param {number} options.memory - Memory cost in KiB (default: 65536 = 64MB)
+   * @param {number} options.iterations - Time cost / iterations (default: 3)
+   * @param {number} options.parallelism - Parallelism factor (default: 1)
+   * @param {number} options.keyLength - Output key length in bits (default: 256)
+   * @returns {Promise<CryptoKey>} Derived AES key for encryption/decryption
+   */
+  async deriveKeyArgon2Enhanced(password, salt, options = {}) {
+    const {
+      memory = 65536, // 64 MB
+      iterations = 3,
+      parallelism = 1,
+      keyLength = 256,
+    } = options;
+
+    const encoder = new TextEncoder();
+    const keyMaterial = await this._crypto.subtle.importKey(
+      "raw",
+      encoder.encode(password),
+      { name: "Argon2" },
+      false,
+      ["deriveBits", "deriveKey"]
+    );
+
+    try {
+      // Try to use native Argon2 if available (Node.js 20+, some browsers)
+      return await this._crypto.subtle.deriveKey(
+        {
+          name: "Argon2",
+          salt: salt,
+          iterations: iterations,
+          memoryCost: memory,
+          parallelism: parallelism,
+        },
+        keyMaterial,
+        { name: WebCryptAsym.AES_ALGORITHM, length: keyLength },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    } catch (e) {
+      // Fallback: Use PBKDF2 with much higher iteration count
+      console.warn("Argon2 not available; using PBKDF2 with 1M iterations as fallback");
+      return await this.deriveKeyPBKDF2(password, salt, 1000000, "SHA-256", keyLength);
+    }
+  }
+
+  /**
+   * SHA-3 based key derivation function (quantum-resistant, collision-resistant).
+   * Provides an alternative to PBKDF2/Argon2 using SHA-3 post-quantum hash.
+   *
+   * @param {string} password - Password to derive from
+   * @param {Uint8Array} salt - Random salt
+   * @param {number} iterations - KDF iterations (recommended: 50000+)
+   * Derive a key from password using SHA-3 with configurable iterations.
+   * @param {string} password - Password to derive from
+   * @param {number} iterations - Number of hash iterations
+   * @param {string} algorithm - Hash algorithm: 'SHA3-256', 'SHA3-384', 'SHA3-512' (default: SHA3-256)
+   * @returns {Promise<CryptoKey>} Derived AES key
+   */
+  async deriveKeySHA3(password, iterations = 100000, algorithm = "SHA3-256") {
+    const encoder = new TextEncoder();
+    const passwordBytes = encoder.encode(password);
+
+    // Generate deterministic salt from password (same password → same salt)
+    const saltHash = await this._crypto.subtle.digest("SHA-256", passwordBytes);
+    const salt = new Uint8Array(saltHash).slice(0, 16);
+
+    let material = new Uint8Array(passwordBytes.byteLength + salt.byteLength);
+    material.set(passwordBytes);
+    material.set(salt, passwordBytes.byteLength);
+
+    // Iterative SHA-3 KDF
+    for (let i = 0; i < iterations; i++) {
+      const hashInput = new Uint8Array(material.byteLength + 4);
+      hashInput.set(material);
+      new DataView(hashInput.buffer).setUint32(material.byteLength, i, true);
+
+      try {
+        material = new Uint8Array(await this._crypto.subtle.digest(algorithm, hashInput));
+      } catch (e) {
+        // SHA-3 not available; fall back to SHA-256
+        console.warn("SHA-3 not available; falling back to SHA-256");
+        material = new Uint8Array(await this._crypto.subtle.digest("SHA-256", hashInput));
+      }
+    }
+
+    // Take first 32 bytes as the derived key
+    const derivedKey = material.slice(0, 32);
+
+    return await this._crypto.subtle.importKey(
+      "raw",
+      derivedKey,
+      { name: WebCryptAsym.AES_ALGORITHM, length: 256 },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  }
+
+  /**
+   * HKDF (HMAC-based Extract-and-Expand KDF) with SHA-3 for quantum-resistant expansion.
+   * Suitable for deriving multiple independent keys from a single master secret.
+   *
+   * @param {Uint8Array} secret - Input key material (IKM)
+   * @param {Uint8Array} salt - Optional salt (default: all zeros)
+   * @param {Uint8Array} info - Optional context/application-specific info
+   * @param {number} keyLength - Output key length in bits (default: 256)
+   * @returns {Promise<CryptoKey>} Derived key
+   */
+  async deriveKeyHKDFSHA3(secret, salt, info = new Uint8Array(0), keyLength = 256) {
+    if (!salt || salt.byteLength === 0) {
+      salt = new Uint8Array(32); // All zeros
+    }
+
+    // Step 1: HMAC-SHA3 Extract
+    try {
+      const hmacKey = await this._crypto.subtle.importKey(
+        "raw",
+        salt,
+        { name: "HMAC", hash: "SHA3-256" },
+        false,
+        ["sign"]
+      );
+      const prk = await this._crypto.subtle.sign("HMAC", hmacKey, secret);
+
+      // Step 2: HMAC-SHA3 Expand
+      const expandHmacKey = await this._crypto.subtle.importKey(
+        "raw",
+        new Uint8Array(prk),
+        { name: "HMAC", hash: "SHA3-256" },
+        false,
+        ["sign"]
+      );
+
+      const hashLen = 32; // SHA3-256 output
+      const n = Math.ceil(keyLength / 8 / hashLen);
+      let okm = new Uint8Array(0);
+      let t = new Uint8Array(0);
+
+      for (let i = 1; i <= n; i++) {
+        const hmacInput = new Uint8Array(t.byteLength + info.byteLength + 1);
+        hmacInput.set(t);
+        hmacInput.set(info, t.byteLength);
+        hmacInput[t.byteLength + info.byteLength] = i;
+
+        t = new Uint8Array(await this._crypto.subtle.sign("HMAC", expandHmacKey, hmacInput));
+        const newOkm = new Uint8Array(okm.byteLength + t.byteLength);
+        newOkm.set(okm);
+        newOkm.set(t, okm.byteLength);
+        okm = newOkm;
+      }
+
+      const finalKey = okm.slice(0, keyLength / 8);
+      return await this._crypto.subtle.importKey(
+        "raw",
+        finalKey,
+        { name: WebCryptAsym.AES_ALGORITHM, length: keyLength },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    } catch (e) {
+      // Fall back to SHA-256 based HKDF
+      console.warn("HKDF-SHA3 failed; falling back to HKDF-SHA256");
+      return await this.deriveKeyHKDFSHA2(secret, salt, info, keyLength);
+    }
+  }
+
+  /**
+   * HKDF with SHA-256 (fallback variant).
+   */
+  async deriveKeyHKDFSHA2(secret, salt, info = new Uint8Array(0), keyLength = 256) {
+    if (!salt || salt.byteLength === 0) {
+      salt = new Uint8Array(32);
+    }
+
+    const hmacKey = await this._crypto.subtle.importKey(
+      "raw",
+      salt,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const prk = await this._crypto.subtle.sign("HMAC", hmacKey, secret);
+
+    const expandHmacKey = await this._crypto.subtle.importKey(
+      "raw",
+      new Uint8Array(prk),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+
+    const hashLen = 32;
+    const n = Math.ceil(keyLength / 8 / hashLen);
+    let okm = new Uint8Array(0);
+    let t = new Uint8Array(0);
+
+    for (let i = 1; i <= n; i++) {
+      const hmacInput = new Uint8Array(t.byteLength + info.byteLength + 1);
+      hmacInput.set(t);
+      hmacInput.set(info, t.byteLength);
+      hmacInput[t.byteLength + info.byteLength] = i;
+
+      t = new Uint8Array(await this._crypto.subtle.sign("HMAC", expandHmacKey, hmacInput));
+      const newOkm = new Uint8Array(okm.byteLength + t.byteLength);
+      newOkm.set(okm);
+      newOkm.set(t, okm.byteLength);
+      okm = newOkm;
+    }
+
+    const finalKey = okm.slice(0, keyLength / 8);
+    return await this._crypto.subtle.importKey(
+      "raw",
+      finalKey,
+      { name: WebCryptAsym.AES_ALGORITHM, length: keyLength },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  }
+
+  /**
+   * Key rotation: Re-derive key with new salt (for key management & security policies).
+   * Useful for periodic key rotation without re-encryption.
+   *
+   * @param {string} password - Original password
+   * @param {Uint8Array} newSalt - New salt for re-derivation
+   * @param {string} method - KDF method: 'PBKDF2' (default), 'Argon2', 'SHA3', 'HKDF'
+   * @returns {Promise<CryptoKey>} New derived key
+   */
+  async rotateKeyNew(password, newSalt, method = "PBKDF2") {
+    switch (method) {
+      case "Argon2":
+        return await this.deriveKeyArgon2Enhanced(password, newSalt);
+      case "SHA3":
+        return await this.deriveKeySHA3(password, newSalt);
+      case "HKDF":
+        const secret = new TextEncoder().encode(password);
+        return await this.deriveKeyHKDFSHA3(secret, newSalt);
+      case "PBKDF2":
+      default:
+        return await this.deriveKeyPBKDF2(password, newSalt);
+    }
+  }
+
+  /**
+   * Derive hierarchical child key from parent key (for key structures).
+   * Enables creating distinct keys for different purposes from a single master key.
+   *
+   * @param {CryptoKey} parentKey - Parent AES key
+   * @param {Uint8Array} childSalt - Context/application-specific salt
+   * @param {string} purpose - Purpose string (e.g., 'encryption', 'signing', 'hmac')
+   * @returns {Promise<CryptoKey>} Child derived key
+   */
+  async deriveChildKeyHierarchical(parentKey, childSalt, purpose = "encryption") {
+    // Extract parent key material
+    const parentKeyRaw = await this._crypto.subtle.exportKey("raw", parentKey);
+
+    // Combine with purpose and salt
+    const input = new Uint8Array(parentKeyRaw.byteLength + childSalt.byteLength + purpose.length);
+    input.set(new Uint8Array(parentKeyRaw));
+    input.set(childSalt, parentKeyRaw.byteLength);
+    input.set(new TextEncoder().encode(purpose), parentKeyRaw.byteLength + childSalt.byteLength);
+
+    // Derive via SHA-3 hash
+    try {
+      const childKeyMaterial = await this._crypto.subtle.digest("SHA3-256", input);
+      return await this._crypto.subtle.importKey(
+        "raw",
+        childKeyMaterial,
+        { name: WebCryptAsym.AES_ALGORITHM, length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    } catch (e) {
+      // Fall back to SHA-256
+      const childKeyMaterial = await this._crypto.subtle.digest("SHA-256", input);
+      return await this._crypto.subtle.importKey(
+        "raw",
+        childKeyMaterial,
+        { name: WebCryptAsym.AES_ALGORITHM, length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    }
+  }
+
+  /**
+   * Secure key erasure: Overwrite key material in memory.
+   * Note: This is best-effort; true secure erasure depends on runtime guarantees.
+   *
+   * @param {Uint8Array} key - Key material to erase
+   */
+  secureKeyErase(key) {
+    if (key && typeof key === "object") {
+      for (let i = 0; i < key.byteLength; i++) {
+        key[i] = 0;
+      }
+    }
   }
 }

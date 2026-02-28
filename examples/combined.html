@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WebCrypt — Combined Example</title>
+</head>
+<body>
+  <h1>WebCrypt + WebCryptAsym — Combined Demo</h1>
+  <p>This page demonstrates deriving an AES key (via <code>WebCryptAsym.deriveKeySHA3</code>), encrypting with AES-GCM, and HMACing the ciphertext with <code>WebCrypt</code>.</p>
+
+  <button id="run">Run Demo</button>
+  <pre id="out"></pre>
+
+  <script type="module">
+    import { WebCrypt } from '../src/WebCrypt.js';
+    import { WebCryptAsym } from '../src/WebCryptAsym.js';
+
+    const crypt = new WebCrypt();
+    const asym = new WebCryptAsym();
+    const out = document.getElementById('out');
+
+    function toBase64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+
+    document.getElementById('run').addEventListener('click', async () => {
+      out.textContent = 'Deriving AES key (fast demo)...';
+      const aesKey = await asym.deriveKeySHA3('demo-password', 10, 'SHA3-256');
+
+      out.textContent += '\nEncrypting plaintext...';
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const plaintext = new TextEncoder().encode('Top secret message');
+      const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, plaintext);
+
+      out.textContent += `\nCiphertext (base64): ${toBase64(ciphertext)}`;
+
+      out.textContent += '\nGenerating HMAC of ciphertext...';
+      const hmacKey = await crypt.generateHmacKeySHA3();
+      const tag = await crypt.computeHmacSHA3(new Uint8Array(ciphertext), hmacKey);
+
+      out.textContent += `\nHMAC: ${tag}`;
+
+      out.textContent += '\nVerifying HMAC...';
+      const ok = await crypt.verifyHmacSHA3(new Uint8Array(ciphertext), tag, hmacKey);
+      out.textContent += ok ? ' OK' : ' FAIL';
+    });
+  </script>
+</body>
+</html>

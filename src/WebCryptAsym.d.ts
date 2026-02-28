@@ -388,6 +388,116 @@ declare class WebCryptAsym {
    * Clear the internal key cache
    */
   clearKeyCache(): void;
+
+  // ═══════════════════════════ Post-Quantum Key Derivation ═══════════════════════════
+
+  /**
+   * Enhanced Argon2id KDF (quantum-resistant, GPU/ASIC resistant).
+   * Stronger than PBKDF2 for high-entropy passwords.
+   *
+   * @param password - Password to derive from
+   * @param salt - Random salt (16+ bytes recommended)
+   * @param options - Configuration object
+   * @param options.memory - Memory cost in KiB (default: 65536 = 64MB)
+   * @param options.iterations - Time cost (default: 3)
+   * @param options.parallelism - Parallelism factor (default: 1)
+   * @param options.keyLength - Output key length in bits (default: 256)
+   * @returns Derived AES key
+   */
+  deriveKeyArgon2Enhanced(
+    password: string,
+    salt: Uint8Array,
+    options?: {
+      memory?: number;
+      iterations?: number;
+      parallelism?: number;
+      keyLength?: number;
+    }
+  ): Promise<CryptoKey>;
+
+  /**
+   * SHA-3 based KDF (post-quantum collision-resistant).
+   * Alternative to PBKDF2/Argon2 using quantum-resistant SHA-3 hash.
+   *
+   * @param password - Password to derive from
+   * @param salt - Random salt
+   * @param iterations - KDF iterations (default: 50000)
+   * @param hash - Hash algorithm: 'SHA3-256' | 'SHA3-384' | 'SHA3-512'
+   * @param keyLength - Output key length in bits (default: 256)
+   * @returns Derived AES key
+   */
+  deriveKeySHA3(
+    password: string,
+    salt: Uint8Array,
+    iterations?: number,
+    hash?: "SHA3-256" | "SHA3-384" | "SHA3-512",
+    keyLength?: number
+  ): Promise<CryptoKey>;
+
+  /**
+   * HKDF with SHA-3 (quantum-resistant key expansion).
+   * Suitable for deriving multiple independent keys from a master secret.
+   *
+   * @param secret - Input key material (IKM)
+   * @param salt - Optional salt (default: all zeros)
+   * @param info - Optional context/application-specific info
+   * @param keyLength - Output key length in bits (default: 256)
+   * @returns Derived AES key
+   */
+  deriveKeyHKDFSHA3(
+    secret: Uint8Array,
+    salt?: Uint8Array,
+    info?: Uint8Array,
+    keyLength?: number
+  ): Promise<CryptoKey>;
+
+  /**
+   * HKDF with SHA-256 (fallback variant).
+   */
+  deriveKeyHKDFSHA2(
+    secret: Uint8Array,
+    salt?: Uint8Array,
+    info?: Uint8Array,
+    keyLength?: number
+  ): Promise<CryptoKey>;
+
+  /**
+   * Key rotation: Derive new key with fresh salt.
+   * Enables periodic key rotation without data re-encryption (in some schemes).
+   *
+   * @param password - Original password
+   * @param newSalt - New salt for re-derivation
+   * @param method - KDF method: 'PBKDF2' | 'Argon2' | 'SHA3' | 'HKDF'
+   * @returns New derived key
+   */
+  rotateKeyNew(
+    password: string,
+    newSalt: Uint8Array,
+    method?: "PBKDF2" | "Argon2" | "SHA3" | "HKDF"
+  ): Promise<CryptoKey>;
+
+  /**
+   * Hierarchical key derivation: Create distinct keys for different purposes.
+   * Enables key structures where child keys are derived from a parent key.
+   *
+   * @param parentKey - Parent AES key
+   * @param childSalt - Context/application-specific salt
+   * @param purpose - Purpose string (e.g., 'encryption', 'signing', 'hmac')
+   * @returns Child derived key
+   */
+  deriveChildKeyHierarchical(
+    parentKey: CryptoKey,
+    childSalt: Uint8Array,
+    purpose?: string
+  ): Promise<CryptoKey>;
+
+  /**
+   * Secure key erasure: Overwrite sensitive key material in memory.
+   * Best-effort; true secure erasure depends on runtime guarantees.
+   *
+   * @param key - Key material to erase
+   */
+  secureKeyErase(key: Uint8Array): void;
 }
 
 export { WebCryptAsym };

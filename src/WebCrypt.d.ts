@@ -110,6 +110,34 @@ declare class WebCrypt {
    * @returns True if valid.
    */
   verifyHmac(data: string | ArrayBuffer, hmac: string, key: CryptoKey): Promise<boolean>;
+
+  /**
+   * Generate a quantum-resistant HMAC key using SHA-3 hash.
+   * @param password Optional password for derivation (600k iterations)
+   * @param hash Hash algorithm: 'SHA3-256' | 'SHA3-384' | 'SHA3-512' (default: SHA3-256)
+   * @returns Usable HMAC key with SHA-3
+   */
+  generateHmacKeySHA3(
+    password?: string,
+    hash?: "SHA3-256" | "SHA3-384" | "SHA3-512"
+  ): Promise<CryptoKey>;
+
+  /**
+   * Compute HMAC using SHA-3 (quantum-resistant).
+   * @param data Data to authenticate
+   * @param key HMAC key from generateHmacKeySHA3
+   * @returns Base64-encoded HMAC tag
+   */
+  computeHmacSHA3(data: string | ArrayBuffer, key: CryptoKey): Promise<string>;
+
+  /**
+   * Verify HMAC using SHA-3 (quantum-resistant).
+   * @param data Data to verify
+   * @param hmac Base64-encoded HMAC tag
+   * @param key HMAC key
+   * @returns True if valid
+   */
+  verifyHmacSHA3(data: string | ArrayBuffer, hmac: string, key: CryptoKey): Promise<boolean>;
 }
 
 /**

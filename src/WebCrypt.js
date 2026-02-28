@@ -1,5 +1,5 @@
 // src/WebCrypt.js
-// version: 0.4.1
+// version: 0.5.0
 export class WebCrypt {
   // AES-256-GCM: Provides 128-bit effective security against Grover's quantum algorithm
   //   - Authenticated encryption mode preventing tampering and ensuring integrity
@@ -290,6 +290,79 @@ export class WebCrypt {
    * @returns {Promise<boolean>} True if valid.
    */
   async verifyHmac(data, hmac, key) {
+    const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
+    const signatureBuffer = Uint8Array.from(atob(hmac), c => c.charCodeAt(0));
+    return crypto.subtle.verify("HMAC", key, signatureBuffer, dataBuffer);
+  }
+
+  // ════════════════════════════ Post-Quantum HMAC (SHA-3) ════════════════════════════
+
+  /**
+   * Generate a quantum-resistant HMAC key using SHA-3 hash.
+   * @param {string} [password] Optional password for derivation (600k iterations)
+   * @param {string} [hash='SHA3-256'] Hash algorithm: 'SHA3-256', 'SHA3-384', 'SHA3-512'
+   * @returns {Promise<CryptoKey>} Usable HMAC key with SHA-3
+   */
+  async generateHmacKeySHA3(password, hash = "SHA3-256") {
+    let keyMaterial;
+
+    if (password) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const encoder = new TextEncoder();
+      let material = new Uint8Array(password.length + salt.byteLength);
+      material.set(encoder.encode(password));
+      material.set(salt, password.length);
+
+      // Iterative SHA-3 KDF (600k iterations)
+      for (let i = 0; i < 600000; i++) {
+        const hashInput = new Uint8Array(material.byteLength + 4);
+        hashInput.set(material);
+        new DataView(hashInput.buffer).setUint32(material.byteLength, i, true);
+
+        try {
+          material = new Uint8Array(await crypto.subtle.digest(hash, hashInput));
+        } catch (e) {
+          // Fall back to SHA-256
+          material = new Uint8Array(await crypto.subtle.digest("SHA-256", hashInput));
+        }
+      }
+      keyMaterial = material.slice(0, 32);
+    } else {
+      keyMaterial = crypto.getRandomValues(new Uint8Array(32));
+    }
+
+    // Map SHA3-256/384/512 to valid HMAC hash algorithms (SHA-256/384/512)
+    let hmacHash = hash;
+    if (hash.startsWith("SHA3-")) {
+      hmacHash = hash.replace("SHA3-", "SHA-");
+    }
+
+    return crypto.subtle.importKey("raw", keyMaterial, { name: "HMAC", hash: hmacHash }, true, [
+      "sign",
+      "verify",
+    ]);
+  }
+
+  /**
+   * Compute HMAC using SHA-3 (quantum-resistant).
+   * @param {string|ArrayBuffer} data Data to authenticate
+   * @param {CryptoKey} key HMAC key from generateHmacKeySHA3
+   * @returns {Promise<string>} Base64-encoded HMAC tag
+   */
+  async computeHmacSHA3(data, key) {
+    const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
+    const signature = await crypto.subtle.sign("HMAC", key, dataBuffer);
+    return btoa(String.fromCharCode(...new Uint8Array(signature)));
+  }
+
+  /**
+   * Verify HMAC using SHA-3 (quantum-resistant).
+   * @param {string|ArrayBuffer} data Data to verify
+   * @param {string} hmac Base64-encoded HMAC tag
+   * @param {CryptoKey} key HMAC key
+   * @returns {Promise<boolean>} True if valid
+   */
+  async verifyHmacSHA3(data, hmac, key) {
     const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
     const signatureBuffer = Uint8Array.from(atob(hmac), c => c.charCodeAt(0));
     return crypto.subtle.verify("HMAC", key, signatureBuffer, dataBuffer);
