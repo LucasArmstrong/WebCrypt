@@ -469,4 +469,65 @@ describe("WebCryptAsym", () => {
       });
     });
   });
+
+  describe("ECDH Key Exchange and Data Encryption", () => {
+    let aliceKeys, bobKeys;
+
+    beforeAll(async () => {
+      aliceKeys = await crypt.generateECDHKeyPair();
+      bobKeys = await crypt.generateECDHKeyPair();
+    });
+
+    test("should generate valid ECDH keys", () => {
+      expect(aliceKeys).toHaveProperty("publicKey");
+      expect(aliceKeys).toHaveProperty("privateKey");
+      expect(aliceKeys.publicKeyB64).toBeTruthy();
+    });
+
+    test("should export and import ECDH public keys", async () => {
+      const b64 = await crypt.exportECDHPublicKey(aliceKeys.publicKey);
+      const imported = await crypt.importECDHPublicKey(b64);
+      expect(imported.type).toBe("public");
+      expect(imported.algorithm.name).toBe("ECDH");
+    });
+
+    test("should derive the same shared secret for both parties", async () => {
+      const aliceSecret = await crypt.deriveECDHSharedSecret(
+        aliceKeys.privateKey,
+        bobKeys.publicKey
+      );
+      const bobSecret = await crypt.deriveECDHSharedSecret(bobKeys.privateKey, aliceKeys.publicKey);
+
+      // Verify that they returned valid crypto keys
+      expect(aliceSecret).toBeInstanceOf(CryptoKey);
+      expect(bobSecret).toBeInstanceOf(CryptoKey);
+      expect(aliceSecret.algorithm.name).toBe("AES-GCM");
+      expect(bobSecret.algorithm.name).toBe("AES-GCM");
+    });
+
+    test("encryptWithECDH() and decryptWithECDH() roundtrip (JSON)", async () => {
+      const payload = { type: "MESSAGE", content: "Hello from Alice", timestamp: Date.now() };
+
+      const encryptedB64 = await crypt.encryptWithECDH(
+        payload,
+        aliceKeys.privateKey,
+        bobKeys.publicKey
+      );
+      expect(typeof encryptedB64).toBe("string");
+
+      const decrypted = await crypt.decryptWithECDH(
+        encryptedB64,
+        bobKeys.privateKey,
+        aliceKeys.publicKey
+      );
+      expect(decrypted).toEqual(payload);
+    });
+
+    test("encryptData() and decryptData() with RSA keys", async () => {
+      const data = { auth: true, user: "admin" };
+      const encrypted = await crypt.encryptData(data, rsaKeyPair.publicKey);
+      const decrypted = await crypt.decryptData(encrypted, rsaKeyPair.privateKey);
+      expect(decrypted).toEqual(data);
+    });
+  });
 });

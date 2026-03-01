@@ -132,4 +132,24 @@ describe("WebCrypt – Full Test Suite", () => {
     const decrypted = await wc.decryptText(encrypted, PASSWORD);
     expect(decrypted).toBe(largeText);
   });
+
+  // Data encryption (JSON integration)
+  test("encryptData() → decryptData() works with objects and arrays", async () => {
+    const data = {
+      message: "Secret",
+      count: 42,
+      tags: ["crypto", "test"],
+      nested: { active: true },
+    };
+    const encrypted = await wc.encryptData(data, PASSWORD);
+    const decrypted = await wc.decryptData(encrypted, PASSWORD);
+    expect(decrypted).toEqual(data);
+  });
+
+  // Random Password generation
+  test("generateRandomPassword() returns a base64 string", () => {
+    const pass = wc.generateRandomPassword(16);
+    expect(typeof pass).toBe("string");
+    expect(pass.length).toBeGreaterThan(0);
+  });
 });

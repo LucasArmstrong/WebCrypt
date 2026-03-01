@@ -1,5 +1,5 @@
 // src/WebCryptAsym.js
-// version: 0.5.0
+// version: 0.5.1
 export class WebCryptAsym {
   // Constants for RSA-4096 hybrid encryption
   // RSA provides strong classical security against current factoring attacks
@@ -1580,5 +1580,148 @@ export class WebCryptAsym {
         key[i] = 0;
       }
     }
+  }
+
+  // ────────────────────── ECDH Key Exchange ──────────────────────
+
+  /**
+   * Generate an ECDH key pair for key exchange.
+   * @param {string} curve - Elliptic curve to use (default: 'P-256')
+   * @returns {Promise<{publicKey: CryptoKey, privateKey: CryptoKey, publicKeyB64: string}>}
+   */
+  async generateECDHKeyPair(curve = "P-256") {
+    const keyPair = await this._crypto.subtle.generateKey(
+      { name: "ECDH", namedCurve: curve },
+      true,
+      ["deriveKey", "deriveBits"]
+    );
+    const publicKeyB64 = await this.exportECDHPublicKey(keyPair.publicKey);
+    return { publicKey: keyPair.publicKey, privateKey: keyPair.privateKey, publicKeyB64 };
+  }
+
+  /**
+   * Export an ECDH public key to base64 for sharing.
+   * @param {CryptoKey} publicKey
+   * @returns {Promise<string>}
+   */
+  async exportECDHPublicKey(publicKey) {
+    const exported = await this._crypto.subtle.exportKey("spki", publicKey);
+    return this._arrayBufferToBase64(exported);
+  }
+
+  /**
+   * Import an ECDH public key from base64.
+   * @param {string} b64 - Base64 string of the public key
+   * @param {string} curve - Curve used (default: 'P-256')
+   * @returns {Promise<CryptoKey>}
+   */
+  async importECDHPublicKey(b64, curve = "P-256") {
+    const binary = this._base64ToArrayBuffer(b64);
+    return await this._crypto.subtle.importKey(
+      "spki",
+      binary,
+      { name: "ECDH", namedCurve: curve },
+      true,
+      [] // ECDH public keys don't have operations themselves, they are used as parameters
+    );
+  }
+
+  /**
+   * Derive a shared secret using ECDH.
+   * @param {CryptoKey} privateKey - Your private key
+   * @param {CryptoKey} publicKey - The other party's public key
+   * @returns {Promise<CryptoKey>} An AES-GCM key derived from the shared secret
+   */
+  async deriveECDHSharedSecret(privateKey, publicKey) {
+    return await this._crypto.subtle.deriveKey(
+      { name: "ECDH", public: publicKey },
+      privateKey,
+      { name: WebCryptAsym.AES_ALGORITHM, length: WebCryptAsym.AES_LENGTH },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  }
+
+  /**
+   * Encrypt data automatically deriving an ECDH shared secret.
+   * This is a convenient all-in-one E2EE method for sender and recipient pairs.
+   * @param {any} data - Serializable data or string to encrypt
+   * @param {CryptoKey} privateKey - Sender's private key
+   * @param {CryptoKey} recipientPublicKey - Recipient's public key
+   * @returns {Promise<string>} Base64-encoded encrypted payload
+   */
+  async encryptWithECDH(data, privateKey, recipientPublicKey) {
+    const sharedKey = await this.deriveECDHSharedSecret(privateKey, recipientPublicKey);
+    const text = typeof data === "string" ? data : JSON.stringify(data);
+    const encoder = new TextEncoder();
+    const encoded = encoder.encode(text);
+    const iv = crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
+
+    const encrypted = await this._crypto.subtle.encrypt(
+      { name: WebCryptAsym.AES_ALGORITHM, iv },
+      sharedKey,
+      encoded
+    );
+
+    const result = new Uint8Array(WebCryptAsym.IV_LENGTH + encrypted.byteLength);
+    result.set(iv, 0);
+    result.set(new Uint8Array(encrypted), WebCryptAsym.IV_LENGTH);
+    return this._arrayBufferToBase64(result.buffer);
+  }
+
+  /**
+   * Decrypt data automatically deriving an ECDH shared secret.
+   * @param {string} b64 - Base64-encoded encrypted payload
+   * @param {CryptoKey} privateKey - Recipient's private key
+   * @param {CryptoKey} senderPublicKey - Sender's public key
+   * @returns {Promise<any>} The original data
+   */
+  async decryptWithECDH(b64, privateKey, senderPublicKey) {
+    const sharedKey = await this.deriveECDHSharedSecret(privateKey, senderPublicKey);
+    const combined = new Uint8Array(this._base64ToArrayBuffer(b64));
+
+    if (combined.byteLength < WebCryptAsym.IV_LENGTH) {
+      throw new Error("Invalid encrypted data");
+    }
+
+    const iv = combined.slice(0, WebCryptAsym.IV_LENGTH);
+    const ciphertext = combined.slice(WebCryptAsym.IV_LENGTH);
+
+    const decrypted = await this._crypto.subtle.decrypt(
+      { name: WebCryptAsym.AES_ALGORITHM, iv },
+      sharedKey,
+      ciphertext
+    );
+
+    const text = new TextDecoder().decode(decrypted);
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      return text;
+    }
+  }
+
+  // ────────────────────── Human-Friendly Data Operations ──────────────────────
+
+  /**
+   * Automatically serializes any JavaScript object or array to JSON before encrypting.
+   * @param {any} data - Any serializable JavaScript data
+   * @param {CryptoKey} publicKey - RSA public key
+   * @returns {Promise<string>} Base64-encoded encrypted string
+   */
+  async encryptData(data, publicKey) {
+    const text = JSON.stringify(data);
+    return await this.encryptText(text, publicKey);
+  }
+
+  /**
+   * Decrypts the data and automatically parses it back into a JavaScript object.
+   * @param {string} b64 - Base64-encoded encrypted string
+   * @param {CryptoKey} privateKey - RSA private key
+   * @returns {Promise<any>} The original JavaScript data
+   */
+  async decryptData(b64, privateKey) {
+    const text = await this.decryptText(b64, privateKey);
+    return JSON.parse(text);
   }
 }

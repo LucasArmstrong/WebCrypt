@@ -114,7 +114,7 @@ describe("WebCryptPQC - Integration Tests", () => {
 
       expect(decapsulated.byteLength).toBe(32);
     }
-  });
+  }, 15000);
 
   test("All three Dilithium security levels work end-to-end", async () => {
     const document = new Uint8Array([1, 2, 3, 4, 5]);

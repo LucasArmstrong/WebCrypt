@@ -498,6 +498,63 @@ declare class WebCryptAsym {
    * @param key - Key material to erase
    */
   secureKeyErase(key: Uint8Array): void;
+
+  // ────────────────────── ECDH Key Exchange ──────────────────────
+
+  /**
+   * Generate an ECDH key pair for key exchange.
+   * @param curve - Elliptic curve to use (default: 'P-256')
+   */
+  generateECDHKeyPair(curve?: string): Promise<{
+    publicKey: CryptoKey;
+    privateKey: CryptoKey;
+    publicKeyB64: string;
+  }>;
+
+  /**
+   * Export an ECDH public key to base64 for sharing.
+   */
+  exportECDHPublicKey(publicKey: CryptoKey): Promise<string>;
+
+  /**
+   * Import an ECDH public key from base64.
+   * @param b64 - Base64 string of the public key
+   * @param curve - Curve used (default: 'P-256')
+   */
+  importECDHPublicKey(b64: string, curve?: string): Promise<CryptoKey>;
+
+  /**
+   * Derive a shared secret using ECDH.
+   * @param privateKey - Your private key
+   * @param publicKey - The other party's public key
+   */
+  deriveECDHSharedSecret(privateKey: CryptoKey, publicKey: CryptoKey): Promise<CryptoKey>;
+
+  /**
+   * Encrypt data automatically deriving an ECDH shared secret.
+   * @param data - Serializable data or string to encrypt
+   * @param privateKey - Sender's private key
+   * @param recipientPublicKey - Recipient's public key
+   */
+  encryptWithECDH(data: any, privateKey: CryptoKey, recipientPublicKey: CryptoKey): Promise<string>;
+
+  /**
+   * Decrypt data automatically deriving an ECDH shared secret.
+   * @param b64 - Base64-encoded encrypted payload
+   * @param privateKey - Recipient's private key
+   * @param senderPublicKey - Sender's public key
+   */
+  decryptWithECDH(b64: string, privateKey: CryptoKey, senderPublicKey: CryptoKey): Promise<any>;
+
+  /**
+   * Automatically serializes any JavaScript object or array to JSON before encrypting.
+   */
+  encryptData(data: any, publicKey: CryptoKey): Promise<string>;
+
+  /**
+   * Decrypts the data and automatically parses it back into a JavaScript object.
+   */
+  decryptData(b64: string, privateKey: CryptoKey): Promise<any>;
 }
 
 export { WebCryptAsym };

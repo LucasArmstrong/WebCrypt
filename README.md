@@ -1,6 +1,6 @@
 # webcrypt
 
-**Zero-dependency • Strong End-to-End Encryption for the Modern Web (v0.5.0 – Post-Quantum Edition)**  
+**Zero-dependency • Strong End-to-End Encryption for the Modern Web (v0.5.1 – Post-Quantum Edition)**  
 Pure Web Crypto API-powered **AES-256-GCM** symmetric encryption + **RSA-4096 hybrid asymmetric** mode + **NIST post-quantum cryptography** (Kyber + Dilithium).
 
 - Password-based symmetric encryption (WebCrypt) – AES-256-GCM, already quantum-resistant
@@ -200,6 +200,25 @@ console.log(decrypted);
 // → "The treasure is buried under the old oak tree"
 ```
 
+##### Encrypt & Decrypt Complex JSON Data (New in v0.5.1)
+
+Using the `encryptData` and `decryptData` helper functions to avoid manual `JSON.stringify` logic:
+
+```js
+const data = {
+  message: "Hello world!",
+  timestamp: Date.now(),
+  users: ["Alice", "Bob"],
+};
+
+// Automatically serializes into JSON before encrypting
+const encryptedObj = await wc.encryptData(data, "my-super-secret-password");
+
+// Automatically parses JSON back into a valid JS object
+const decryptedObj = await wc.decryptData(encryptedObj, "my-super-secret-password");
+console.log(decryptedObj.users); // ["Alice", "Bob"]
+```
+
 ##### Encrypt & Decrypt Files (streaming, low memory)
 
 ```html
@@ -275,6 +294,39 @@ const { blob: decryptedBlob, filename: originalName } = await crypt.decryptFile(
   encryptedFile,
   keyPair.privateKey
 );
+
+// Encrypt pure objects automatically
+const encryptedData = await crypt.encryptData({ msg: "Hi" }, publicKey);
+const decryptedData = await crypt.decryptData(encryptedData, keyPair.privateKey);
+```
+
+##### ECDH Key Exchange Handshake (New in v0.5.1)
+
+Elliptic Curve Diffie-Hellman (ECDH) is an industry-standard mechanism for deriving shared secrets natively supported by the Web Crypto API.
+
+```js
+// 1. Each user creates an ECDH key pair
+const aliceKeys = await crypt.generateECDHKeyPair();
+const bobKeys = await crypt.generateECDHKeyPair();
+
+// 2. Users exchange purely their PUBLIC keys
+const alicePubB64 = aliceKeys.publicKeyB64;
+const bobPubB64 = bobKeys.publicKeyB64;
+
+// 3. Sender securely encrypts Data using their private key and the recipient's public key
+const encryptedPayload = await crypt.encryptWithECDH(
+  { data: "Super Secret from Alice" },
+  aliceKeys.privateKey,
+  await crypt.importECDHPublicKey(bobPubB64)
+);
+
+// 4. Recipient decrypts Data using their private key and the sender's public key
+const decryptedPayload = await crypt.decryptWithECDH(
+  encryptedPayload,
+  bobKeys.privateKey,
+  await crypt.importECDHPublicKey(alicePubB64)
+);
+console.log(decryptedPayload.data); // "Super Secret from Alice"
 ```
 
 ##### Signing & Verifying (ECDSA)
@@ -599,6 +651,11 @@ const isValid384 = await wc.verifyHmac("Important message", hmac384, key384); //
 ```ts
 const wc = new WebCrypt();
 
+// Data encryption/decryption (JSON objects)
+wc.encryptData(data: any, password: string): Promise<string>
+wc.decryptData(b64: string, password: string): Promise<any>
+wc.generateRandomPassword(length?: number): string
+
 // Text encryption/decryption
 wc.encryptText(text: string, password: string): Promise<string>
 wc.decryptText(b64: string, password: string): Promise<string>
@@ -636,6 +693,18 @@ crypt.deriveKeyArgon2(password: string, salt: string, options?: { memory?: numbe
 // Text encryption/decryption
 crypt.encryptText(text: string, publicKey: CryptoKey): Promise<string>
 crypt.decryptText(b64: string, privateKey: CryptoKey): Promise<string>
+
+// Data encryption/decryption (JSON objects)
+crypt.encryptData(data: any, publicKey: CryptoKey): Promise<string>
+crypt.decryptData(b64: string, privateKey: CryptoKey): Promise<any>
+
+// ECDH Key Exchange
+crypt.generateECDHKeyPair(curve?: string): Promise<{ publicKey: CryptoKey, privateKey: CryptoKey, publicKeyB64: string }>
+crypt.exportECDHPublicKey(publicKey: CryptoKey): Promise<string>
+crypt.importECDHPublicKey(b64: string, curve?: string): Promise<CryptoKey>
+crypt.deriveECDHSharedSecret(privateKey: CryptoKey, publicKey: CryptoKey): Promise<CryptoKey>
+crypt.encryptWithECDH(data: any, privateKey: CryptoKey, recipientPublicKey: CryptoKey): Promise<string>
+crypt.decryptWithECDH(b64: string, privateKey: CryptoKey, senderPublicKey: CryptoKey): Promise<any>
 
 // File encryption/decryption
 crypt.encryptFile(file: File|Blob, publicKey: CryptoKey): Promise<{ blob: Blob, filename: string }>

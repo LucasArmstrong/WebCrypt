@@ -138,6 +138,21 @@ declare class WebCrypt {
    * @returns True if valid
    */
   verifyHmacSHA3(data: string | ArrayBuffer, hmac: string, key: CryptoKey): Promise<boolean>;
+
+  /**
+   * Automatically serializes any JavaScript object or array to JSON before encrypting.
+   */
+  encryptData(data: any, password: string): Promise<string>;
+
+  /**
+   * Decrypts the data and automatically parses it back into a JavaScript object.
+   */
+  decryptData(base64: string, password: string): Promise<any>;
+
+  /**
+   * Utility to generate a cryptographically secure random password or key string.
+   */
+  generateRandomPassword(length?: number): string;
 }
 
 /**

@@ -1,5 +1,5 @@
 // src/WebCrypt.js
-// version: 0.5.0
+// version: 0.5.1
 export class WebCrypt {
   // AES-256-GCM: Provides 128-bit effective security against Grover's quantum algorithm
   //   - Authenticated encryption mode preventing tampering and ensuring integrity
@@ -366,5 +366,46 @@ export class WebCrypt {
     const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
     const signatureBuffer = Uint8Array.from(atob(hmac), c => c.charCodeAt(0));
     return crypto.subtle.verify("HMAC", key, signatureBuffer, dataBuffer);
+  }
+
+  // ────────────────────── Human-Friendly Data Operations ──────────────────────
+
+  /**
+   * Automatically serializes any JavaScript object or array to JSON before encrypting.
+   * Eliminates the need for manual JSON.stringify.
+   * @param {any} data - Any serializable JavaScript data (object, array, string, number)
+   * @param {string} password - The encryption password
+   * @returns {Promise<string>} Base64-encoded encrypted string
+   */
+  async encryptData(data, password) {
+    const text = JSON.stringify(data);
+    return await this.encryptText(text, password);
+  }
+
+  /**
+   * Decrypts the data and automatically parses it back into a JavaScript object.
+   * @param {string} b64 - Base64-encoded encrypted string
+   * @param {string} password - The decryption password
+   * @returns {Promise<any>} The original JavaScript data
+   */
+  async decryptData(b64, password) {
+    const text = await this.decryptText(b64, password);
+    return JSON.parse(text);
+  }
+
+  /**
+   * Utility to generate a cryptographically secure random password or key string.
+   * Useful for generating strong unique keys for encryption passes.
+   * @param {number} length - Length of the generated password (default: 32)
+   * @returns {string} Base64-encoded random password
+   */
+  generateRandomPassword(length = 32) {
+    const cryptoInstance = this._getCrypto();
+    const randomBytes = cryptoInstance.getRandomValues(new Uint8Array(length));
+    let binary = "";
+    for (let i = 0; i < randomBytes.byteLength; i++) {
+      binary += String.fromCharCode(randomBytes[i]);
+    }
+    return btoa(binary);
   }
 }
