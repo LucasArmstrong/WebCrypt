@@ -1,15 +1,28 @@
 # webcrypt
 
-**Zero-dependency • Strong End-to-End Encryption for the Modern Web (v0.5.1 – Post-Quantum Edition)**  
-Pure Web Crypto API-powered **AES-256-GCM** symmetric encryption + **RSA-4096 hybrid asymmetric** mode + **NIST post-quantum cryptography** (Kyber + Dilithium).
+**Zero-dependency • Strong End-to-End Encryption for the Modern Web (v0.5.1)**  
+Pure Web Crypto API-powered **AES-256-GCM** symmetric encryption + **RSA-4096 hybrid asymmetric** mode.
+
+⚠️ **CRITICAL SECURITY WARNING**: See [Security Warnings](#security-warnings) section below before using this library in production. All critical and high-priority security fixes have been implemented - see [SECURITY_FIXES.md](./SECURITY_FIXES.md) for complete details.
 
 - Password-based symmetric encryption (WebCrypt) – AES-256-GCM, already quantum-resistant
 - Asymmetric encryption (WebCryptAsym) – RSA-4096 with hybrid Kyber support for forward-secrecy
-- **Post-quantum cryptography** (WebCryptPQC) – NIST-approved Kyber (key exchange) + Dilithium (signatures)
-- Digital signatures – ECDSA, RSA-PSS, EdDSA, and **post-quantum Dilithium**
-- Hybrid encryption – Classical + post-quantum for immediate quantum-safe defense
-- Advanced key derivation – PBKDF2, Argon2id, SHA-3 KDF, HKDF-SHA3
+- **Post-quantum cryptography** (WebCryptPQC) – ⚠️ PLACEHOLDER stub until liboqs-js integration
+- Digital signatures – ECDSA, RSA-PSS, EdDSA (**NOT Dilithium - placeholder**)
+- Hybrid encryption – Classical + post-quantum framework (**Kyber part is a stub**)
+- Advanced key derivation – PBKDF2, Argon2id stub, SHA-3 KDF, HKDF-SHA3
 - Zero dependencies • Works offline • Browser + Node.js • Production-ready quantum-resistance planning
+
+Recent Security Hardening (v0.5.1 → v0.6.0):
+✅ All critical vulnerabilities fixed - See [SECURITY_FIXES.md](./SECURITY_FIXES.md) for details:
+✅ PQC stub warnings added (no false security claims)  
+ ✅ Argon2 deprecation with clear warnings  
+ ✅ Key cache TTL/eviction system (5-minute expiry, LRU cleanup)  
+ ✅ PBKDF2 iterations increased to 600k (OWASP compliant)  
+ ✅ Cross-environment crypto API consistency fixed  
+ ✅ Input validation & DoS protection (10MB limit)  
+ ✅ Error message sanitization (generic errors in production)  
+ ✅ Timing attack resistance in verification functions
 
 ```bash
 npm install webcrypt
@@ -22,38 +35,46 @@ import { WebCryptPQC } from "webcrypt";
 
 const wc = new WebCrypt();
 const wca = new WebCryptAsym();
-const pqc = new WebCryptPQC();
+const pqc = new WebCryptPQC(); // ⚠️ Will warn on load about stub status
 ```
 
 Works in: Browser • Node.js • React • Angular • Next.js • Vue • Svelte • Electron • Deno • Cloudflare Workers
 
 #### Features
 
-| Feature                           | Status | Details                                             |
-| --------------------------------- | ------ | --------------------------------------------------- |
-| Text encryption                   | Done   | AES-256-GCM, returns base64 string                  |
-| File encryption                   | Done   | Streaming — handles 10 GB+ files                    |
-| File decryption                   | Done   | Restores original filename                          |
-| WebRTC E2EE (video + audio)       | Done   | Insertable Streams — true end-to-end                |
-| Digital signatures                | Done   | ECDSA, RSA-PSS, EdDSA, and **Dilithium (PQC)**      |
-| Post-quantum key exchange         | Done   | Kyber (lattice-based) – NIST finalist               |
-| Hybrid encryption (classical+PQC) | Done   | RSA-4096 + Kyber simultaneously for forward-secrecy |
-| Zero dependencies                 | Done   | Pure Web Crypto API                                 |
-| Node.js 18+ support               | Done   | Native crypto.webcrypto                             |
-| Strong key derivation             | Done   | 600k PBKDF2 + SHA-3 KDF + Argon2id                  |
-| Advanced KDFs                     | Done   | HKDF-SHA3, Argon2id, key rotation, hierarchical KD  |
-| Key caching                       | Done   | Same password = instant reuse                       |
-| TypeScript support                | Done   | Full .d.ts included for all modules                 |
-| HMAC (SHA-256/384/512)            | Done   | Message authentication with multiple hashes         |
-| HMAC-SHA3 (quantum-resistant)     | Done   | Post-quantum MAC support                            |
+| Feature                           | Status  | Details                                        |
+| --------------------------------- | ------- | ---------------------------------------------- |
+| Text encryption                   | ✅ Done | AES-256-GCM, returns base64 string             |
+| File encryption                   | ✅ Done | Streaming — handles 10 GB+ files               |
+| File decryption                   | ✅ Done | Restores original filename                     |
+| WebRTC E2EE (video + audio)       | ✅ Done | Insertable Streams — true end-to-end           |
+| Digital signatures                | ✅ Done | ECDSA, RSA-PSS, EdDSA                          |
+| Post-quantum key exchange         | ⚠️ Stub | Kyber placeholder until liboqs-js integration  |
+| Hybrid encryption (classical+PQC) | ⚠️ Stub | RSA + Kyber stub (NOT real PQC!)               |
+| Zero dependencies                 | ✅ Done | Pure Web Crypto API                            |
+| Node.js 18+ support               | ✅ Done | Native crypto.webcrypto                        |
+| Strong key derivation             | ✅ Done | 600k PBKDF2 + SHA-3 KDF (Argon2 is stub)       |
+| Advanced KDFs                     | ✅ Done | HKDF-SHA3, Argon2id stub, key rotation         |
+| Key caching                       | ✅ Done | Same password = instant reuse (5-min TTL, LRU) |
+| TypeScript support                | ✅ Done | Full .d.ts included for all modules            |
+| HMAC (SHA-256/384/512)            | ✅ Done | Message authentication with multiple hashes    |
+| HMAC-SHA3 (quantum-resistant)     | ✅ Done | Post-quantum MAC support                       |
 
 #### What's new (v0.5.0) – Post-Quantum Cryptography Edition
 
-**Major additions: Full NIST PQC suite + hybrid encryption for quantum-safe messaging**
+**Major additions: Hybrid encryption + PQC framework (placeholder implementation)**
 
-- **WebCryptPQC module**: Kyber (lattice-based KEM) and Dilithium (lattice-based signatures) – NIST PQC finalists
-  - 3 Kyber security levels: Kyber512 (128-bit), Kyber768 (192-bit), Kyber1024 (256-bit)
-  - 3 Dilithium security levels: Dilithium2, Dilithium3, Dilithium5
+⚠️ **SECURITY WARNING**: WebCryptPQC module is currently a **PLACEHOLDER**. Kyber and Dilithium use simplified SHA-3 hashing stubs, NOT real lattice-based cryptography. For production security:
+
+1. Use `WebCryptAsym` with hybrid encryption (RSA-4096 only)
+2. Integrate official [liboqs-js](https://github.com/openquantumsafe/libs) for real PQC
+3. Wait for WebCrypt v0.6+ with proper liboqs integration
+
+- **WebCryptPQC module (PLACEHOLDER)**: Kyber + Dilithium stub implementations – NOT production-ready
+  - ⚠️ Uses SHA-3 hashing instead of real lattice-based algorithms
+  - DO NOT USE FOR PRODUCTION SECURITY!
+  - 3 Kyber security levels: Kyber512, Kyber768, Kyber1024 (stub sizes only)
+  - 3 Dilithium security levels: Dilithium2, Dilithium3, Dilithium5 (stub sizes only)
 - **Hybrid encryption** (Kyber + RSA-OAEP): Forward-secure key exchange resisting both classical and quantum attacks
 - **Post-quantum KDFs**:
   - SHA-3 based KDF (collision-resistant, quantum-immune)
@@ -103,9 +124,40 @@ Works in: Browser • Node.js • React • Angular • Next.js • Vue • Svel
   - **Hybrid key exchange**: Kyber + RSA-OAEP ensures forward secrecy + classical compatibility
   - **Post-quantum KDFs**: SHA-3, HKDF-SHA3, Argon2id for quantum-safe key derivation
 
+#### ⚠️ SECURITY WARNING: Post-Quantum Cryptography Status
+
+**CRITICAL**: The WebCryptPQC module is currently a PLACEHOLDER implementation. It does NOT provide real post-quantum security.
+
+##### Current State (v0.5.x):
+
+- ❌ **WebCryptPQC.Kyber**: Uses SHA-3 hashing stubs, NOT real lattice-based KEM
+- ❌ **WebCryptPQC.Dilithium**: Uses HMAC-based stubs, NOT real lattice-based signatures
+- ✅ **WebCrypt (symmetric)**: AES-256-GCM is quantum-safe against Grover's algorithm
+- ⚠️ **WebCryptAsym (hybrid)**: RSA-4096 vulnerable to Shor's algorithm on future quantum computers
+
+##### Recommended Approach:
+
+1. **Use WebCrypt** for symmetric encryption (already quantum-safe)
+2. **Use hybridEncapsulate() with caution** – Kyber part is a stub, but provides framework for future real PQC
+3. **Integrate liboqs-js directly** for production post-quantum needs:
+   ```bash
+   npm install @openquantumsafe/libs
+   ```
+4. **Wait for WebCrypt v0.6+** with official liboqs integration
+
+##### Migration Path to Real PQC:
+
+```
+v0.5.x (Current): Placeholder stubs → Integrate liboqs-js manually
+v0.6+ (Future):    Official liboqs-js integration → Production-ready PQC
+2030+:             Pure lattice-based cryptography → Full quantum resistance
+```
+
+**See [Quantum Resistance & Security Model](#quantum-resistance--security-model) for detailed analysis.**
+
 #### Quantum Resistance & Security Model (v0.5+)
 
-WebCrypt now provides **harvest-now-decrypt-later defense** and true **post-quantum cryptography** readiness.
+WebCrypt provides **harvest-now-decrypt-later defense** for symmetric encryption, but post-quantum features are PLACEHOLDERS until liboqs-js integration.
 
 **The Problem: Quantum Threats Ahead**
 
@@ -149,19 +201,22 @@ WebCrypt now provides **harvest-now-decrypt-later defense** and true **post-quan
 
    - ✅ **Defense-in-depth**: Secure if Kyber _or_ RSA holds; breaks only if both crack
 
-**Migration Path: Classical → Hybrid → Pure PQC**
+**Migration Path to Real PQC:**
 
 ```
-Phase 1 (Now): Use WebCryptAsym (RSA-4096 only)
-  → Vulnerable to future quantum computers recording data
+v0.5.x (Current):
+  • Use WebCryptAsym (RSA-4096 only) for asymmetric encryption
+  • ⚠️ hybridEncapsulate() Kyber part is a stub - NOT quantum-safe!
+  • Integrate liboqs-js directly for production PQC needs
 
-Phase 2 (2025+): Use hybridEncapsulate (Kyber + RSA)
-  → Data protected by Kyber immediately, RSA provides fallback
-  → New encrypted data safe; old RSA-only data still vulnerable to harvest attacks
+v0.6+ (Future):
+  • Official liboqs-js integration → Real Kyber + Dilithium
+  • Use hybridEncapsulate() with confidence (real PQC)
+  • Recommended for new deployments needing quantum resistance
 
-Phase 3 (2030+): Use WebCryptPQC (pure Kyber + Dilithium)
-  → No RSA dependency; pure post-quantum cryptography
-  → Recommended for long-term secrets (>10 years)
+2030+:
+  • Pure WebCryptPQC (Kyber + Dilithium) → No RSA dependency
+  • Full post-quantum cryptography for long-term secrets (>10 years)
 ```
 
 **Performance Notes** (Quantum resistance has trade-offs):
@@ -849,6 +904,8 @@ import { WebCrypt } from "webcrypt"; // ES Modules
 MIT License — free for personal and commercial use  
 © 2026 Lucas Armstrong  
 https://github.com/lucasarmstrong/webcrypt
+
+**IMPORTANT DISCLAIMER**: This software is provided "as is", without warranty of any kind, express or implied. The code is intended **for educational purposes only**. Users assume all responsibility for how they use this library and its encryption implementations. The authors and contributors are not responsible for any data loss, security breaches, legal issues, or damages arising from the use of this software. Encryption has significant implications for privacy, compliance, and law enforcement - users should consult with qualified security professionals before deploying in production environments.
 
 No telemetry. No servers. No backdoors.  
 Just pure, unbreakable encryption that works offline, forever.

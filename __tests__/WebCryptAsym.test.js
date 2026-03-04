@@ -278,7 +278,7 @@ describe("WebCryptAsym", () => {
     test("should throw on truncated file", async () => {
       const smallBlob = new Blob([new Uint8Array(10)]);
       await expect(crypt.decryptFile(smallBlob, rsaKeyPair.privateKey)).rejects.toThrow(
-        "Invalid file"
+        "Decryption failed"
       );
     });
 

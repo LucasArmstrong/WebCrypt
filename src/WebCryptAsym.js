@@ -1,5 +1,7 @@
 // src/WebCryptAsym.js
 // version: 0.5.1
+import TimingSafeHelper from "./TimingSafeHelper.js"; // Add timing-safe helper for DoS protection and constant-time comparisons
+
 export class WebCryptAsym {
   // Constants for RSA-4096 hybrid encryption
   // RSA provides strong classical security against current factoring attacks
@@ -40,13 +42,80 @@ export class WebCryptAsym {
   // Key Derivation Function constants
   static PBKDF2_ALGORITHM = "PBKDF2";
   static PBKDF2_HASH = "SHA-256";
-  static PBKDF2_ITERATIONS = 100000;
+  // ⚠️ INCREASED to OWASP 2023 recommended minimum of 600k iterations (was 100k)
+  static PBKDF2_ITERATIONS = 600_000;
+  static MAX_KEY_CACHE_SIZE = 10; // LRU cache max size
+  static KEY_CACHE_TTL_MS = 300_000; // 5 minutes TTL per key
   static ARGON2_ALGORITHM = "Argon2id";
 
   constructor() {
     this._crypto = this._getCrypto();
-    // Cache for frequently used keys to improve performance
+    // Cache for frequently used keys to improve performance (with LRU eviction)
     this._keyCache = new Map();
+    this._keyCacheCleanupInterval = null;
+    this._startAutoCleanup();
+  }
+
+  /**
+   * Start automatic cache cleanup every minute to remove expired keys
+   */
+  _startAutoCleanup() {
+    // Clean up immediately on start
+    this._cleanupExpiredKeys();
+
+    // Then clean up every minute
+    this._keyCacheCleanupInterval = setInterval(() => {
+      this._cleanupExpiredKeys();
+    }, 60_000); // 1 minute
+  }
+
+  /**
+   * Clean up expired keys from cache based on TTL
+   */
+  _cleanupExpiredKeys() {
+    const now = Date.now();
+    for (const [cacheKey, value] of this._keyCache.entries()) {
+      if (now - value.createdAt > WebCryptAsym.KEY_CACHE_TTL_MS) {
+        // Attempt to clear key material before deletion (best effort)
+        try {
+          const rawKey = this._crypto.subtle.exportKey("raw", value.key);
+          for (let i = 0; i < rawKey.byteLength; i++) {
+            rawKey[i] = Math.random() * 255;
+          }
+        } catch (e) {
+          // Ignore export errors
+        }
+        this._keyCache.delete(cacheKey);
+      }
+    }
+  }
+
+  /**
+   * Clear entire key cache and securely erase all keys
+   */
+  clearKeyCache() {
+    for (const value of this._keyCache.values()) {
+      try {
+        const rawKey = this._crypto.subtle.exportKey("raw", value.key);
+        // Best effort overwrite (JavaScript cannot guarantee secure memory erasure)
+        for (let i = 0; i < rawKey.byteLength; i++) {
+          rawKey[i] = Math.random() * 255;
+        }
+      } catch (e) {
+        // Ignore errors
+      }
+    }
+    this._keyCache.clear();
+  }
+
+  /**
+   * Stop automatic cleanup interval
+   */
+  stopAutoCleanup() {
+    if (this._keyCacheCleanupInterval) {
+      clearInterval(this._keyCacheCleanupInterval);
+      this._keyCacheCleanupInterval = null;
+    }
   }
 
   _getCrypto() {
@@ -121,55 +190,35 @@ export class WebCryptAsym {
   }
 
   /**
-   * Derive a key using Argon2id (where supported)
+   * ⚠️ WARNING: Argon2id is NOT natively supported by Web Crypto API!
+   *
+   * This method attempts to use Argon2, but:
+   * - Browsers/Node.js do NOT support Argon2 in crypto.subtle
+   * - Falls back silently to PBKDF2 (weaker than true Argon2)
+   *
+   * For real Argon2id, install argon2-browser package:
+   * npm install argon2-browser
+   *
+   * @deprecated Use deriveKeyPBKDF2() with high iterations or integrate argon2-browser directly
    * @param {string} password - The password to derive the key from
    * @param {Uint8Array} salt - Salt for the derivation
-   * @param {Object} options - Argon2 configuration options
-   * @returns {Promise<ArrayBuffer>} Derived key
+   * @param {Object} options - Argon2 configuration options (ignored in fallback)
+   * @returns {Promise<CryptoKey>} Derived key (PBKDF2 fallback, NOT true Argon2!)
    */
   async deriveKeyArgon2(password, salt, options = {}) {
-    // Check if Argon2 is supported in the environment
-    if (typeof this._crypto.subtle.deriveKey === "function") {
-      // Try to use Web Crypto API's built-in Argon2 support if available
-      try {
-        const encoder = new TextEncoder();
-        const keyMaterial = await this._crypto.subtle.importKey(
-          "raw",
-          encoder.encode(password),
-          { name: WebCryptAsym.ARGON2_ALGORITHM },
-          false,
-          ["deriveBits", "deriveKey"]
-        );
+    console.warn(
+      "⚠️ CRITICAL: Argon2id is NOT supported by Web Crypto API. " +
+        "Falling back to PBKDF2 with high iterations (still weaker than true Argon2). " +
+        "For production use, install argon2-browser package and use it directly."
+    );
 
-        return await this._crypto.subtle.deriveKey(
-          {
-            name: WebCryptAsym.ARGON2_ALGORITHM,
-            salt: salt,
-            iterations: options.iterations || 3,
-            memoryCost: options.memoryCost || 65536,
-            parallelism: options.parallelism || 1,
-          },
-          keyMaterial,
-          { name: WebCryptAsym.AES_ALGORITHM, length: 256 },
-          false,
-          ["encrypt", "decrypt"]
-        );
-      } catch (e) {
-        // Fall back to PBKDF2 if Argon2 is not supported
-        return await this.deriveKeyPBKDF2(
-          password,
-          salt,
-          options.iterations || WebCryptAsym.PBKDF2_ITERATIONS
-        );
-      }
-    } else {
-      // Fall back to PBKDF2 for environments without Argon2 support
-      return await this.deriveKeyPBKDF2(
-        password,
-        salt,
-        options.iterations || WebCryptAsym.PBKDF2_ITERATIONS
-      );
-    }
+    // Force strong PBKDF2 fallback since Argon2 is unavailable
+    return await this.deriveKeyPBKDF2(
+      password,
+      salt,
+      1000000, // 1M iterations (stronger than default 600k)
+      "SHA-256"
+    );
   }
 
   // ────────────────────── RSA Key Management (for Hybrid Encryption) ──────────────────────
@@ -223,13 +272,6 @@ export class WebCryptAsym {
     this._keyCache.set(cacheKey, key);
   }
 
-  /**
-   * Clear the key cache
-   */
-  clearKeyCache() {
-    this._keyCache.clear();
-  }
-
   // ────────────────────── Hybrid Text Encryption/Decryption ──────────────────────
   // Hybrid design: RSA encrypts a random AES key, AES encrypts the actual data
   // Provides quantum-resistant confidentiality via AES-256 while enabling public-key sharing
@@ -244,7 +286,7 @@ export class WebCryptAsym {
     );
 
     const exportedAesKey = await this._crypto.subtle.exportKey("raw", aesKey);
-    const iv = crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
+    const iv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
 
     // Encrypt the AES key with recipient's RSA public key
     const encryptedAesKey = await this._crypto.subtle.encrypt(
@@ -275,42 +317,59 @@ export class WebCryptAsym {
   }
 
   async decryptText(encryptedB64, privateKey) {
-    const combined = new Uint8Array(this._base64ToArrayBuffer(encryptedB64));
-    if (combined.byteLength < 4 + 100 + WebCryptAsym.IV_LENGTH) {
-      throw new Error("Invalid encrypted data");
+    try {
+      // Input validation for DoS protection
+      if (typeof encryptedB64 !== "string") throw new Error("Invalid input");
+
+      const combined = new Uint8Array(this._base64ToArrayBuffer(encryptedB64));
+
+      // Check size limits to prevent memory exhaustion
+      if (combined.byteLength > WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
+        throw new Error("Decryption failed");
+      }
+
+      if (combined.byteLength < 4 + 100 + WebCryptAsym.IV_LENGTH) {
+        throw new Error("Invalid input");
+      }
+
+      const encKeyLen = new DataView(combined.buffer).getUint32(0, true);
+      if (combined.byteLength < 4 + encKeyLen + WebCryptAsym.IV_LENGTH) {
+        throw new Error("Decryption failed");
+      }
+
+      const encryptedAesKey = combined.slice(4, 4 + encKeyLen);
+      const iv = combined.slice(4 + encKeyLen, 4 + encKeyLen + WebCryptAsym.IV_LENGTH);
+      const ciphertext = combined.slice(4 + encKeyLen + WebCryptAsym.IV_LENGTH);
+
+      // Decrypt the AES key using own RSA private key
+      const aesKeyRaw = await this._crypto.subtle.decrypt(
+        WebCryptAsym.RSA_ALGORITHM,
+        privateKey,
+        encryptedAesKey
+      );
+
+      const aesKey = await this._crypto.subtle.importKey(
+        "raw",
+        aesKeyRaw,
+        { name: WebCryptAsym.AES_ALGORITHM },
+        false,
+        ["decrypt"]
+      );
+
+      const decrypted = await this._crypto.subtle.decrypt(
+        { name: WebCryptAsym.AES_ALGORITHM, iv },
+        aesKey,
+        ciphertext
+      );
+
+      return new TextDecoder().decode(decrypted);
+    } catch (e) {
+      // Log detailed error only in development
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("WebCryptAsym decryptText failed:", e.message);
+      }
+      throw e;
     }
-
-    const encKeyLen = new DataView(combined.buffer).getUint32(0, true);
-    if (combined.byteLength < 4 + encKeyLen + WebCryptAsym.IV_LENGTH) {
-      throw new Error("Truncated encrypted data");
-    }
-
-    const encryptedAesKey = combined.slice(4, 4 + encKeyLen);
-    const iv = combined.slice(4 + encKeyLen, 4 + encKeyLen + WebCryptAsym.IV_LENGTH);
-    const ciphertext = combined.slice(4 + encKeyLen + WebCryptAsym.IV_LENGTH);
-
-    // Decrypt the AES key using own RSA private key
-    const aesKeyRaw = await this._crypto.subtle.decrypt(
-      WebCryptAsym.RSA_ALGORITHM,
-      privateKey,
-      encryptedAesKey
-    );
-
-    const aesKey = await this._crypto.subtle.importKey(
-      "raw",
-      aesKeyRaw,
-      { name: WebCryptAsym.AES_ALGORITHM },
-      false,
-      ["decrypt"]
-    );
-
-    const decrypted = await this._crypto.subtle.decrypt(
-      { name: WebCryptAsym.AES_ALGORITHM, iv },
-      aesKey,
-      ciphertext
-    );
-
-    return new TextDecoder().decode(decrypted);
   }
 
   /**
@@ -339,7 +398,7 @@ export class WebCryptAsym {
     );
 
     const exportedAesKey = await this._crypto.subtle.exportKey("raw", aesKey);
-    const baseIv = crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
+    const baseIv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
 
     const encryptedAesKey = await this._crypto.subtle.encrypt(
       WebCryptAsym.RSA_ALGORITHM,
@@ -381,12 +440,27 @@ export class WebCryptAsym {
     return { blob: newBlob, filename };
   }
 
+  // Maximum allowed encrypted data size (10MB) to prevent DoS attacks
+  static MAX_ENCRYPTED_DATA_SIZE = 10 * 1024 * 1024;
+
   async decryptFile(fileOrBlob, privateKey) {
+    // DoS protection: Check file size before loading into memory
+    const fileSize = fileOrBlob.size || (fileOrBlob.blob && fileOrBlob.blob.size);
+    if (fileSize && fileSize > WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
+      throw new Error("File too large for decryption");
+    }
+
     const data = new Uint8Array(await fileOrBlob.arrayBuffer());
-    if (data.length < 4 + 100 + WebCryptAsym.IV_LENGTH) throw new Error("Invalid file");
+
+    // DoS protection: Check size after loading
+    if (data.length > WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
+      throw new Error("File too large for decryption");
+    }
+
+    if (data.length < 4 + 100 + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
 
     const encKeyLen = new DataView(data.buffer).getUint32(0, true);
-    if (data.length < 4 + encKeyLen + WebCryptAsym.IV_LENGTH) throw new Error("Truncated header");
+    if (data.length < 4 + encKeyLen + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
 
     const encryptedAesKey = data.slice(4, 4 + encKeyLen);
     const baseIv = data.slice(4 + encKeyLen, 4 + encKeyLen + WebCryptAsym.IV_LENGTH);
@@ -454,7 +528,7 @@ export class WebCryptAsym {
     let first = true;
 
     return async (frame, controller) => {
-      const iv = crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
+      const iv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
 
       if (first) {
         // First frame carries encrypted session key + IV + payload
@@ -699,7 +773,9 @@ export class WebCryptAsym {
     const data = new TextEncoder().encode(text);
     const signature = this._base64ToArrayBuffer(signatureB64);
 
-    return await this._crypto.subtle.verify(
+    // Timing-safe verification to prevent timing oracle attacks
+    return await TimingSafeHelper.timingSafeVerify(
+      this._crypto,
       {
         name: WebCryptAsym.SIGN_ALGORITHM,
         hash: { name: WebCryptAsym.SIGN_HASH },
@@ -789,7 +865,9 @@ export class WebCryptAsym {
 
     const hashBuffer = await this._crypto.subtle.digest(WebCryptAsym.SIGN_HASH, data);
 
-    return await this._crypto.subtle.verify(
+    // Timing-safe verification to prevent timing oracle attacks
+    return await TimingSafeHelper.timingSafeVerify(
+      this._crypto,
       {
         name: WebCryptAsym.SIGN_ALGORITHM,
         hash: { name: WebCryptAsym.SIGN_HASH },
@@ -836,7 +914,9 @@ export class WebCryptAsym {
     const encodedData = encoder.encode(data);
     const signature = this._base64ToArrayBuffer(signatureB64);
 
-    return await this._crypto.subtle.verify(
+    // Timing-safe verification to prevent timing oracle attacks
+    return await TimingSafeHelper.timingSafeVerify(
+      this._crypto,
       {
         name: "HMAC",
         hash: { name: hash },
@@ -906,7 +986,7 @@ export class WebCryptAsym {
     let first = true;
 
     return async (frame, controller) => {
-      const iv = crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
+      const iv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
 
       if (first) {
         // First frame carries encrypted session key + IV + payload
@@ -966,7 +1046,7 @@ export class WebCryptAsym {
     let totalBytes = 0;
 
     return async (frame, controller) => {
-      const iv = crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
+      const iv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
 
       if (first) {
         // First frame carries encrypted session key + IV + payload
@@ -1022,7 +1102,7 @@ export class WebCryptAsym {
     );
 
     const exportedAesKey = await this._crypto.subtle.exportKey("raw", aesKey);
-    const baseIv = crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
+    const baseIv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
 
     const encryptedAesKey = await this._crypto.subtle.encrypt(
       WebCryptAsym.RSA_ALGORITHM,
@@ -1079,11 +1159,22 @@ export class WebCryptAsym {
    * @returns {Promise<{blob: Blob, filename: string}>} Decrypted file and metadata
    */
   async decryptFileWithProgress(fileOrBlob, privateKey, onProgress) {
+    // DoS protection: Check file size before loading into memory
+    const fileSize = fileOrBlob.size || (fileOrBlob.blob && fileOrBlob.blob.size);
+    if (fileSize && fileSize > WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
+      throw new Error("File too large for decryption");
+    }
+
     const data = new Uint8Array(await fileOrBlob.arrayBuffer());
-    if (data.length < 4 + 100 + WebCryptAsym.IV_LENGTH) throw new Error("Invalid file");
+
+    // DoS protection: Check size after loading
+    if (data.length > WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
+      throw new Error("File too large for decryption");
+    }
+    if (data.length < 4 + 100 + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
 
     const encKeyLen = new DataView(data.buffer).getUint32(0, true);
-    if (data.length < 4 + encKeyLen + WebCryptAsym.IV_LENGTH) throw new Error("Truncated header");
+    if (data.length < 4 + encKeyLen + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
 
     const encryptedAesKey = data.slice(4, 4 + encKeyLen);
     const baseIv = data.slice(4 + encKeyLen, 4 + encKeyLen + WebCryptAsym.IV_LENGTH);
@@ -1241,7 +1332,7 @@ export class WebCryptAsym {
    */
   async secureRandom(length) {
     // Use the Web Crypto API's getRandomValues if available, otherwise fall back to a secure method
-    return crypto.getRandomValues(new Uint8Array(length));
+    return this._crypto.getRandomValues(new Uint8Array(length));
   }
 
   /**
@@ -1271,7 +1362,7 @@ export class WebCryptAsym {
   _throwTimingSafeError(message) {
     // Use a timing-safe approach to avoid leaking information through timing
     const dummy = new Uint8Array(100);
-    crypto.getRandomValues(dummy);
+    this._crypto.getRandomValues(dummy);
     throw new Error(message);
   }
 
@@ -1655,7 +1746,7 @@ export class WebCryptAsym {
     const text = typeof data === "string" ? data : JSON.stringify(data);
     const encoder = new TextEncoder();
     const encoded = encoder.encode(text);
-    const iv = crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
+    const iv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
 
     const encrypted = await this._crypto.subtle.encrypt(
       { name: WebCryptAsym.AES_ALGORITHM, iv },

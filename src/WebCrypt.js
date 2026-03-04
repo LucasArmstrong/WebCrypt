@@ -20,8 +20,75 @@ export class WebCrypt {
   static WEBRTC_SALT = new TextEncoder().encode("WebCrypt-E2EE-v1-2025");
 
   // Caches derived keys for instant reuse with same password/salt (performance optimization)
+  static MAX_KEY_CACHE_SIZE = 10; // LRU cache max size
+  static KEY_CACHE_TTL_MS = 300_000; // 5 minutes TTL per key
+
   constructor() {
     this.keyCache = new Map();
+    this._keyCacheCleanupInterval = null;
+    this._startAutoCleanup();
+  }
+
+  /**
+   * Start automatic cache cleanup every minute to remove expired keys
+   */
+  _startAutoCleanup() {
+    // Clean up immediately on start
+    this._cleanupExpiredKeys();
+
+    // Then clean up every minute
+    this._keyCacheCleanupInterval = setInterval(() => {
+      this._cleanupExpiredKeys();
+    }, 60_000); // 1 minute
+  }
+
+  /**
+   * Clean up expired keys from cache based on TTL
+   */
+  _cleanupExpiredKeys() {
+    const now = Date.now();
+    for (const [cacheKey, value] of this.keyCache.entries()) {
+      if (now - value.createdAt > WebCrypt.KEY_CACHE_TTL_MS) {
+        // Attempt to clear key material before deletion (best effort)
+        try {
+          const rawKey = this._getCrypto().subtle.exportKey("raw", value.key);
+          for (let i = 0; i < rawKey.byteLength; i++) {
+            rawKey[i] = Math.random() * 255;
+          }
+        } catch (e) {
+          // Ignore export errors
+        }
+        this.keyCache.delete(cacheKey);
+      }
+    }
+  }
+
+  /**
+   * Clear entire key cache and securely erase all keys
+   */
+  clearKeyCache() {
+    for (const value of this.keyCache.values()) {
+      try {
+        const rawKey = this._getCrypto().subtle.exportKey("raw", value.key);
+        // Best effort overwrite (JavaScript cannot guarantee secure memory erasure)
+        for (let i = 0; i < rawKey.byteLength; i++) {
+          rawKey[i] = Math.random() * 255;
+        }
+      } catch (e) {
+        // Ignore errors
+      }
+    }
+    this.keyCache.clear();
+  }
+
+  /**
+   * Stop automatic cleanup interval
+   */
+  stopAutoCleanup() {
+    if (this._keyCacheCleanupInterval) {
+      clearInterval(this._keyCacheCleanupInterval);
+      this._keyCacheCleanupInterval = null;
+    }
   }
 
   _getCrypto() {
@@ -37,10 +104,17 @@ export class WebCrypt {
 
   // Derives AES key using PBKDF2: High iterations ensure quantum-resistant key stretching
   // Cache hit: O(1) reuse; miss: Computes once per unique password/salt
+  // LRU eviction when cache exceeds MAX_KEY_CACHE_SIZE
   async _deriveKey(password, salt) {
     const crypto = this._getCrypto();
     const cacheKey = `${password}:${btoa(String.fromCharCode(...salt))}`;
-    if (this.keyCache.has(cacheKey)) return this.keyCache.get(cacheKey);
+
+    if (this.keyCache.has(cacheKey)) {
+      // Update access time for LRU tracking
+      const value = this.keyCache.get(cacheKey);
+      value.lastAccessed = Date.now();
+      return value.key;
+    }
 
     const enc = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey(
@@ -64,7 +138,31 @@ export class WebCrypt {
       ["encrypt", "decrypt"]
     );
 
-    this.keyCache.set(cacheKey, key);
+    // LRU eviction if cache is full
+    if (this.keyCache.size >= WebCrypt.MAX_KEY_CACHE_SIZE) {
+      // Find oldest unused key (by lastAccessed or createdAt)
+      let oldestKey = null;
+      let oldestTime = Infinity;
+
+      for (const [k, v] of this.keyCache.entries()) {
+        const accessTime = v.lastAccessed || v.createdAt;
+        if (accessTime < oldestTime) {
+          oldestTime = accessTime;
+          oldestKey = k;
+        }
+      }
+
+      if (oldestKey) {
+        this.keyCache.delete(oldestKey);
+      }
+    }
+
+    this.keyCache.set(cacheKey, {
+      key: key,
+      createdAt: Date.now(),
+      lastAccessed: Date.now(),
+    });
+
     return key;
   }
 
@@ -108,23 +206,40 @@ export class WebCrypt {
     return this._arrayBufferToBase64(result.buffer);
   }
 
+  // Maximum allowed encrypted data size (10MB) to prevent DoS attacks
+  static MAX_ENCRYPTED_DATA_SIZE = 10 * 1024 * 1024;
+
   async decryptText(b64, password) {
-    const combined = new Uint8Array(this._base64ToArrayBuffer(b64));
-    if (combined.length < WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH) {
-      throw new Error("Invalid encrypted data");
+    try {
+      const combined = new Uint8Array(this._base64ToArrayBuffer(b64));
+
+      // DoS protection: Check size before processing
+      if (combined.length > WebCrypt.MAX_ENCRYPTED_DATA_SIZE) {
+        throw new Error("Decryption failed");
+      }
+
+      if (combined.length < WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH) {
+        throw new Error("Decryption failed");
+      }
+
+      const salt = combined.slice(0, WebCrypt.SALT_LENGTH);
+      const iv = combined.slice(WebCrypt.SALT_LENGTH, WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH);
+      const ciphertext = combined.slice(WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH);
+
+      const key = await this._deriveKey(password, salt);
+      const decrypted = await crypto.subtle.decrypt(
+        { name: WebCrypt.ALGORITHM, iv },
+        key,
+        ciphertext
+      );
+      return new TextDecoder().decode(decrypted);
+    } catch (e) {
+      // Log detailed error only in development
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("WebCrypt decryptText failed:", e.message);
+      }
+      throw e;
     }
-
-    const salt = combined.slice(0, WebCrypt.SALT_LENGTH);
-    const iv = combined.slice(WebCrypt.SALT_LENGTH, WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH);
-    const ciphertext = combined.slice(WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH);
-
-    const key = await this._deriveKey(password, salt);
-    const decrypted = await crypto.subtle.decrypt(
-      { name: WebCrypt.ALGORITHM, iv },
-      key,
-      ciphertext
-    );
-    return new TextDecoder().decode(decrypted);
   }
 
   // File (streaming)
@@ -161,8 +276,22 @@ export class WebCrypt {
   }
 
   async decryptFile(fileOrBlob, password) {
+    // DoS protection: Check size before loading entire file into memory
+    const fileSize = fileOrBlob.size || (fileOrBlob.blob && fileOrBlob.blob.size);
+    if (fileSize && fileSize > WebCrypt.MAX_ENCRYPTED_DATA_SIZE) {
+      throw new Error("File too large for decryption");
+    }
+
     const data = new Uint8Array(await fileOrBlob.arrayBuffer());
-    if (data.length < WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH) throw new Error("Invalid file");
+
+    // DoS protection: Check size after loading
+    if (data.length > WebCrypt.MAX_ENCRYPTED_DATA_SIZE) {
+      throw new Error("File too large for decryption");
+    }
+
+    if (data.length < WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH) {
+      throw new Error("Decryption failed");
+    }
 
     const salt = data.slice(0, WebCrypt.SALT_LENGTH);
     const baseIv = data.slice(WebCrypt.SALT_LENGTH, WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH);

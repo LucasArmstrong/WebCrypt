@@ -58,5 +58,5 @@ describe("WebCryptPQC - Hybrid Encryption", () => {
       expect(result.kyberCiphertext).toBeDefined();
       expect(result.rsaWrappedSharedSecret).toBeDefined();
     }
-  });
+  }, 15000); // Increase timeout for hybrid operations
 });

@@ -14,7 +14,23 @@
  * and mark stubs for future integration.
  */
 
+/**
+ * ⚠️ WARNING: WebCryptPQC is currently a PLACEHOLDER implementation
+ *
+ * Kyber and Dilithium algorithms are NOT real post-quantum cryptography.
+ * They use simplified SHA-3 hashing as stubs until liboqs-js integration.
+ *
+ * DO NOT USE FOR PRODUCTION SECURITY!
+ *
+ * For production, integrate official liboqs-js:
+ * npm install @openquantumsafe/libs
+ */
 export class WebCryptPQC {
+  static WARNING =
+    "⚠️ CRITICAL: WebCryptPQC is PLACEHOLDER/STUB implementation. " +
+    "Kyber and Dilithium are NOT real PQC - they use SHA-3 hashing stubs. " +
+    "Not suitable for production security. Integrate liboqs-js or wait for official implementation.";
+
   // ─────────────────────── Kyber Constants ───────────────────────
   static KYBER_512 = "Kyber512";
   static KYBER_768 = "Kyber768";
@@ -96,6 +112,10 @@ export class WebCryptPQC {
 
   constructor() {
     this._crypto = this._getCrypto();
+    // Warn users immediately about placeholder status
+    if (typeof console !== "undefined" && console.warn) {
+      console.warn(WebCryptPQC.WARNING);
+    }
   }
 
   _getCrypto() {
@@ -248,12 +268,16 @@ export class WebCryptPQC {
   }
 
   /**
-   * Verify a Dilithium signature.
+   * ⚠️ PLACEHOLDER: Dilithium signature verification stub
+   *
+   * This is NOT real post-quantum signature verification.
+   * It only validates basic format, not cryptographic correctness.
+   *
    * @param {Uint8Array|string} message - Original message
    * @param {Uint8Array} signature - Signature from dilithiumSign
    * @param {Uint8Array} dilithiumPublicKey - Dilithium public key
    * @param {string} level - Dilithium level
-   * @returns {Promise<boolean>} True if valid
+   * @returns {Promise<boolean>} True if format is valid (NOT cryptographic verification!)
    */
   async dilithiumVerify(message, signature, dilithiumPublicKey, level = WebCryptPQC.DILITHIUM_3) {
     if (!WebCryptPQC.SUPPORTED_DILITHIUM_LEVELS.includes(level)) {
@@ -267,23 +291,25 @@ export class WebCryptPQC {
       );
     }
     if (signature.byteLength !== params.signatureSize) {
-      throw new Error(
-        `Invalid signature size: expected ${params.signatureSize}, got ${signature.byteLength}`
-      );
+      // Return false for obviously invalid signatures
+      return false;
     }
 
     const msgBytes = typeof message === "string" ? new TextEncoder().encode(message) : message;
 
-    // STUB: Call libOQS Dilithium3_verify(sig, msg, pk) → 0/error
-    // Placeholder: Use signature's hash as verification proof
-    const expectedSig = await this.dilithiumSign(
-      message,
-      new Uint8Array(params.privateKeySize),
-      level
-    );
-    // In real impl: actual public key verification using polynomial math
+    // ⚠️ PLACEHOLDER: This does NOT verify cryptographic correctness!
+    // Real implementation requires liboqs-js Dilithium_verify()
+    // For now, just check that signature size is correct (format validation only)
 
-    return true; // Placeholder: always true for now. Real impl checks signature against pubkey
+    console.warn(
+      "⚠️ dilithiumVerify() is a PLACEHOLDER stub. " +
+        "This does NOT perform real post-quantum signature verification. " +
+        "Integrate liboqs-js for production use."
+    );
+
+    // Placeholder: Always return true if format looks valid
+    // In real impl: actual public key verification using polynomial math
+    return true;
   }
 
   // ═══════════════════════════ Hybrid Encryption (Kyber + RSA) ═══════════════════════════
