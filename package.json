@@ -1,6 +1,6 @@
 {
   "name": "webcrypt",
-  "version": "0.5.1",
+  "version": "0.5.3",
   "description": "Zero-dependency JavaScript-based AES-256-GCM encryption for text, files & WebRTC E2EE. Includes symmetric (password) and asymmetric (RSA-4096 hybrid) modes. Streaming, quantum-resistant key derivation, pure Web Crypto API.",
   "type": "module",
   "files": [
@@ -30,6 +30,14 @@
       "module": "./dist/WebCryptAsym.js",
       "require": "./dist/WebCryptAsym.cjs",
       "default": "./dist/WebCryptAsym.js"
+    },
+    "./webcrypt-pqc": {
+      "types": "./dist/WebCryptPQC.d.ts",
+      "import": "./dist/WebCryptPQC.js",
+      "browser": "./dist/WebCryptPQC.js",
+      "module": "./dist/WebCryptPQC.js",
+      "require": "./dist/WebCryptPQC.cjs",
+      "default": "./dist/WebCryptPQC.js"
     }
   },
   "typesVersions": {
@@ -42,18 +50,21 @@
       ],
       "webcrypt-asym": [
         "dist/WebCryptAsym.d.ts"
+      ],
+      "webcrypt-pqc": [
+        "dist/WebCryptPQC.d.ts"
       ]
     }
   },
   "scripts": {
-    "build": "tsup src/index.js src/WebCrypt.js src/WebCryptAsym.js --format esm,cjs --dts --clean --no-splitting",
+    "build": "tsup src/index.js src/WebCrypt.js src/WebCryptAsym.js src/WebCryptPQC.js --format esm,cjs --dts --clean --no-splitting",
     "test": "node --experimental-vm-modules $(which jest)",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "format": "prettier --write \"**/*.{js,ts,json,md}\"",
     "format:check": "prettier --check \"**/*.{js,ts,json,md}\"",
     "lint": "npm run format:check",
-    "prepublishOnly": "npm run format:check",
+    "prepublishOnly": "npm run build && npm run format:check",
     "publish": "npm publish --access public"
   },
   "keywords": [

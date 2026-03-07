@@ -1,6 +1,6 @@
 # webcrypt
 
-**Zero-dependency • Strong End-to-End Encryption for the Modern Web (v0.5.1)**  
+**Zero-dependency • Strong End-to-End Encryption for the Modern Web (v0.5.3)**  
 Pure Web Crypto API-powered **AES-256-GCM** symmetric encryption + **RSA-4096 hybrid asymmetric** mode.
 
 ⚠️ **CRITICAL SECURITY WARNING**: See [Security Warnings](#security-warnings) section below before using this library in production. All critical and high-priority security fixes have been implemented - see [SECURITY_FIXES.md](./SECURITY_FIXES.md) for complete details.
@@ -13,7 +13,7 @@ Pure Web Crypto API-powered **AES-256-GCM** symmetric encryption + **RSA-4096 hy
 - Advanced key derivation – PBKDF2, Argon2id stub, SHA-3 KDF, HKDF-SHA3
 - Zero dependencies • Works offline • Browser + Node.js • Production-ready quantum-resistance planning
 
-Recent Security Hardening (v0.5.1 → v0.6.0):
+Recent Security Hardening (v0.5.3):
 ✅ All critical vulnerabilities fixed - See [SECURITY_FIXES.md](./SECURITY_FIXES.md) for details:
 ✅ PQC stub warnings added (no false security claims)  
  ✅ Argon2 deprecation with clear warnings  
