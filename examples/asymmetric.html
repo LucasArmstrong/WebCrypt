@@ -1,43 +1,67 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>WebCryptAsym — Asymmetric Example</title>
-</head>
-<body>
-  <h1>WebCryptAsym — RSA Key Generation & Export</h1>
-  <p>Generate an RSA keypair using <code>WebCryptAsym</code>, export the public key (SPKI, base64) and sign/verify a short message.</p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>WebCryptAsym — Asymmetric Example</title>
+  </head>
+  <body>
+    <h1>WebCryptAsym — RSA Encryption &amp; ECDSA Signing</h1>
+    <p>Generate an RSA keypair for encrypt/decrypt, and an ECDSA keypair for sign/verify.</p>
 
-  <button id="gen">Generate RSA Key Pair</button>
-  <button id="sign">Sign Message</button>
-  <pre id="out"></pre>
+    <button id="gen">Generate Key Pairs</button>
+    <button id="encrypt">Encrypt &amp; Decrypt</button>
+    <button id="sign">Sign &amp; Verify</button>
+    <pre id="out"></pre>
 
-  <script type="module">
-    import { WebCryptAsym } from '../src/WebCryptAsym.js';
+    <script type="module">
+      // For npm users: import { WebCryptAsym } from 'webcrypt';
+      import { WebCryptAsym } from "../src/WebCryptAsym.js";
 
-    const asym = new WebCryptAsym();
-    const out = document.getElementById('out');
-    let keypair;
+      const asym = new WebCryptAsym();
+      const out = document.getElementById("out");
+      let rsaKeys, sigKeys;
 
-    function toBase64(buf) {
-      return btoa(String.fromCharCode(...new Uint8Array(buf)));
-    }
+      document.getElementById("gen").addEventListener("click", async () => {
+        out.textContent = "Generating RSA-4096 key pair (this may take a moment)...";
+        rsaKeys = await asym.generateKeyPair();
+        const pubB64 = await asym.exportPublicKey(rsaKeys.publicKey);
+        out.textContent = `RSA Public Key (SPKI, base64):\n${pubB64}\n`;
 
-    document.getElementById('gen').addEventListener('click', async () => {
-      out.textContent = 'Generating RSA key pair (this may take a moment)...';
-      keypair = await asym.generateKeyPair();
-      const pubSpki = await crypto.subtle.exportKey('spki', keypair.publicKey);
-      out.textContent = `PublicKey (SPKI, base64):\n${toBase64(pubSpki)}`;
-    });
+        out.textContent += "\nGenerating ECDSA signing key pair...";
+        sigKeys = await asym.generateSigningKeyPair("P-256");
+        out.textContent += `\nECDSA Public Key (base64):\n${sigKeys.publicKeyB64}`;
+      });
 
-    document.getElementById('sign').addEventListener('click', async () => {
-      if (!keypair) { out.textContent = 'Generate keys first.'; return; }
-      const msg = new TextEncoder().encode('A short test message');
-      // Use Web Crypt API directly for RSA-PSS signing if available
-      const signature = await crypto.subtle.sign({ name: 'RSA-PSS', saltLength: 32 }, keypair.privateKey, msg);
-      out.textContent = `Signature (base64):\n${toBase64(signature)}`;
-    });
-  </script>
-</body>
+      document.getElementById("encrypt").addEventListener("click", async () => {
+        if (!rsaKeys) {
+          out.textContent = "Generate keys first.";
+          return;
+        }
+        const message = "Hello from WebCryptAsym!";
+        out.textContent = `Encrypting: "${message}"...\n`;
+
+        const encrypted = await asym.encryptText(message, rsaKeys.publicKey);
+        out.textContent += `Encrypted (base64): ${encrypted.slice(0, 60)}...\n`;
+
+        const decrypted = await asym.decryptText(encrypted, rsaKeys.privateKey);
+        out.textContent += `Decrypted: "${decrypted}"`;
+      });
+
+      document.getElementById("sign").addEventListener("click", async () => {
+        if (!sigKeys) {
+          out.textContent = "Generate keys first.";
+          return;
+        }
+        const message = "I approve transaction #123";
+        out.textContent = `Signing: "${message}"...\n`;
+
+        const signature = await asym.signText(message, sigKeys.privateKey);
+        out.textContent += `Signature (base64): ${signature}\n`;
+
+        const valid = await asym.verifyText(message, signature, sigKeys.publicKey);
+        out.textContent += valid ? "Signature valid ✅" : "Signature invalid ❌";
+      });
+    </script>
+  </body>
 </html>

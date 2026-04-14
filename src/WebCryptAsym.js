@@ -1,7 +1,25 @@
 // src/WebCryptAsym.js
-// version: 0.5.1
+// version: 0.5.4
 import TimingSafeHelper from "./TimingSafeHelper.js"; // Add timing-safe helper for DoS protection and constant-time comparisons
 
+/**
+ * WebCryptAsym — RSA-4096 hybrid asymmetric encryption, digital signatures, and key exchange.
+ *
+ * Features:
+ * - RSA-4096 hybrid text/file encryption (RSA-OAEP wraps ephemeral AES-256-GCM keys)
+ * - ECDH key exchange (P-256 / P-384)
+ * - Digital signatures (ECDSA, RSA-PSS, EdDSA stub)
+ * - HMAC with configurable hash algorithms
+ * - Multiple key derivation functions (PBKDF2, SHA-3, HKDF)
+ * - WebRTC Insertable Streams E2EE with hybrid key exchange
+ * - Key caching with TTL and LRU eviction
+ *
+ * @example
+ * const crypt = new WebCryptAsym();
+ * const keys = await crypt.generateKeyPair();
+ * const encrypted = await crypt.encryptText("secret", keys.publicKey);
+ * const decrypted = await crypt.decryptText(encrypted, keys.privateKey);
+ */
 export class WebCryptAsym {
   // Constants for RSA-4096 hybrid encryption
   // RSA provides strong classical security against current factoring attacks
@@ -76,15 +94,6 @@ export class WebCryptAsym {
     const now = Date.now();
     for (const [cacheKey, value] of this._keyCache.entries()) {
       if (now - value.createdAt > WebCryptAsym.KEY_CACHE_TTL_MS) {
-        // Attempt to clear key material before deletion (best effort)
-        try {
-          const rawKey = this._crypto.subtle.exportKey("raw", value.key);
-          for (let i = 0; i < rawKey.byteLength; i++) {
-            rawKey[i] = Math.random() * 255;
-          }
-        } catch (e) {
-          // Ignore export errors
-        }
         this._keyCache.delete(cacheKey);
       }
     }
@@ -94,17 +103,6 @@ export class WebCryptAsym {
    * Clear entire key cache and securely erase all keys
    */
   clearKeyCache() {
-    for (const value of this._keyCache.values()) {
-      try {
-        const rawKey = this._crypto.subtle.exportKey("raw", value.key);
-        // Best effort overwrite (JavaScript cannot guarantee secure memory erasure)
-        for (let i = 0; i < rawKey.byteLength; i++) {
-          rawKey[i] = Math.random() * 255;
-        }
-      } catch (e) {
-        // Ignore errors
-      }
-    }
     this._keyCache.clear();
   }
 
@@ -133,10 +131,10 @@ export class WebCryptAsym {
    * Derive a key using PBKDF2 with configurable parameters
    * @param {string} password - The password to derive the key from
    * @param {Uint8Array} salt - Salt for the derivation
-   * @param {number} iterations - Number of PBKDF2 iterations (default: 100000)
-   * @param {string} hash - Hash algorithm (default: SHA-256)
-   * @param {number} keyLength - Length of the derived key in bits
-   * @returns {Promise<ArrayBuffer>} Derived key
+   * @param {number} [iterations=600000] - Number of PBKDF2 iterations
+   * @param {string} [hash='SHA-256'] - Hash algorithm
+   * @param {number} [keyLength=256] - Length of the derived key in bits
+   * @returns {Promise<CryptoKey>} Derived AES key for encrypt/decrypt
    */
   async deriveKeyPBKDF2(
     password,
@@ -365,7 +363,7 @@ export class WebCryptAsym {
       return new TextDecoder().decode(decrypted);
     } catch (e) {
       // Log detailed error only in development
-      if (process.env.NODE_ENV !== "production") {
+      if (typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production") {
         console.warn("WebCryptAsym decryptText failed:", e.message);
       }
       throw e;
@@ -1422,16 +1420,13 @@ export class WebCryptAsym {
 
   /**
    * SHA-3 based key derivation function (quantum-resistant, collision-resistant).
-   * Provides an alternative to PBKDF2/Argon2 using SHA-3 post-quantum hash.
+   * Uses iterative SHA-3 hashing as an alternative to PBKDF2/Argon2.
+   * Falls back to SHA-256 if SHA-3 is not available in the environment.
    *
    * @param {string} password - Password to derive from
-   * @param {Uint8Array} salt - Random salt
-   * @param {number} iterations - KDF iterations (recommended: 50000+)
-   * Derive a key from password using SHA-3 with configurable iterations.
-   * @param {string} password - Password to derive from
-   * @param {number} iterations - Number of hash iterations
-   * @param {string} algorithm - Hash algorithm: 'SHA3-256', 'SHA3-384', 'SHA3-512' (default: SHA3-256)
-   * @returns {Promise<CryptoKey>} Derived AES key
+   * @param {number} [iterations=100000] - Number of hash iterations (50000+ recommended)
+   * @param {string} [algorithm='SHA3-256'] - Hash algorithm: 'SHA3-256', 'SHA3-384', 'SHA3-512'
+   * @returns {Promise<CryptoKey>} Derived AES-256 key for encrypt/decrypt
    */
   async deriveKeySHA3(password, iterations = 100000, algorithm = "SHA3-256") {
     const encoder = new TextEncoder();

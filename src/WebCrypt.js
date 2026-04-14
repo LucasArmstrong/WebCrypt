@@ -1,5 +1,21 @@
 // src/WebCrypt.js
-// version: 0.5.1
+// version: 0.5.4
+
+/**
+ * WebCrypt — Password-based symmetric encryption using AES-256-GCM.
+ *
+ * Features:
+ * - Text and JSON data encryption/decryption
+ * - Streaming file encryption/decryption (constant memory)
+ * - WebRTC Insertable Streams E2EE
+ * - HMAC (SHA-256/384/512 and SHA-3)
+ * - Key caching with TTL and LRU eviction
+ *
+ * @example
+ * const wc = new WebCrypt();
+ * const encrypted = await wc.encryptText("secret", "password");
+ * const decrypted = await wc.decryptText(encrypted, "password");
+ */
 export class WebCrypt {
   // AES-256-GCM: Provides 128-bit effective security against Grover's quantum algorithm
   //   - Authenticated encryption mode preventing tampering and ensuring integrity
@@ -49,15 +65,6 @@ export class WebCrypt {
     const now = Date.now();
     for (const [cacheKey, value] of this.keyCache.entries()) {
       if (now - value.createdAt > WebCrypt.KEY_CACHE_TTL_MS) {
-        // Attempt to clear key material before deletion (best effort)
-        try {
-          const rawKey = this._getCrypto().subtle.exportKey("raw", value.key);
-          for (let i = 0; i < rawKey.byteLength; i++) {
-            rawKey[i] = Math.random() * 255;
-          }
-        } catch (e) {
-          // Ignore export errors
-        }
         this.keyCache.delete(cacheKey);
       }
     }
@@ -67,17 +74,6 @@ export class WebCrypt {
    * Clear entire key cache and securely erase all keys
    */
   clearKeyCache() {
-    for (const value of this.keyCache.values()) {
-      try {
-        const rawKey = this._getCrypto().subtle.exportKey("raw", value.key);
-        // Best effort overwrite (JavaScript cannot guarantee secure memory erasure)
-        for (let i = 0; i < rawKey.byteLength; i++) {
-          rawKey[i] = Math.random() * 255;
-        }
-      } catch (e) {
-        // Ignore errors
-      }
-    }
     this.keyCache.clear();
   }
 
@@ -189,7 +185,14 @@ export class WebCrypt {
   }
 
   // ────────────────────── Text Encryption (now safe for 10 MB+) ──────────────────────
-  // Single-pass encryption: Efficient for text; quantum-resistant via AES-256 and random salt/IV
+  /**
+   * Encrypt a text string using AES-256-GCM with a password.
+   * Generates a unique random salt and IV per call.
+   *
+   * @param {string} text - Plain text to encrypt
+   * @param {string} password - Password used for key derivation
+   * @returns {Promise<string>} Base64-encoded string containing salt + IV + ciphertext
+   */
   async encryptText(text, password) {
     const data = new TextEncoder().encode(text);
     const salt = crypto.getRandomValues(new Uint8Array(WebCrypt.SALT_LENGTH));
@@ -209,6 +212,14 @@ export class WebCrypt {
   // Maximum allowed encrypted data size (10MB) to prevent DoS attacks
   static MAX_ENCRYPTED_DATA_SIZE = 10 * 1024 * 1024;
 
+  /**
+   * Decrypt a Base64 string produced by encryptText().
+   *
+   * @param {string} b64 - Base64-encoded encrypted data from encryptText()
+   * @param {string} password - Must match the password used for encryption
+   * @returns {Promise<string>} Original plain text
+   * @throws {Error} If password is wrong, data is corrupted, or data exceeds 10 MB
+   */
   async decryptText(b64, password) {
     try {
       const combined = new Uint8Array(this._base64ToArrayBuffer(b64));
@@ -235,15 +246,21 @@ export class WebCrypt {
       return new TextDecoder().decode(decrypted);
     } catch (e) {
       // Log detailed error only in development
-      if (process.env.NODE_ENV !== "production") {
+      if (typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production") {
         console.warn("WebCrypt decryptText failed:", e.message);
       }
       throw e;
     }
   }
 
-  // File (streaming)
-  // Streaming mode: Low-memory encryption for arbitrary file sizes; counter IV for security without storage
+  /**
+   * Encrypt a File or Blob using streaming (constant memory usage).
+   * Each chunk is encrypted with a counter-derived IV for security.
+   *
+   * @param {File|Blob} fileOrBlob - File or Blob to encrypt
+   * @param {string} password - Encryption password
+   * @returns {Promise<{blob: Blob, filename: string}>} Encrypted blob and suggested filename
+   */
   async encryptFile(fileOrBlob, password) {
     const salt = crypto.getRandomValues(new Uint8Array(WebCrypt.SALT_LENGTH));
     const baseIv = crypto.getRandomValues(new Uint8Array(WebCrypt.IV_LENGTH));
@@ -275,6 +292,14 @@ export class WebCrypt {
     return { blob: newBlob, filename };
   }
 
+  /**
+   * Decrypt a .encrypted file produced by encryptFile().
+   *
+   * @param {File|Blob} fileOrBlob - Encrypted File or Blob
+   * @param {string} password - Must match the password used for encryption
+   * @returns {Promise<{blob: Blob, filename: string}>} Decrypted blob and original filename
+   * @throws {Error} If password is wrong, file is corrupted, or file exceeds 10 MB
+   */
   async decryptFile(fileOrBlob, password) {
     // DoS protection: Check size before loading entire file into memory
     const fileSize = fileOrBlob.size || (fileOrBlob.blob && fileOrBlob.blob.size);
@@ -319,9 +344,13 @@ export class WebCrypt {
     return { blob: new Blob(chunks), filename };
   }
 
-  // WebRTC Insertable Streams
-  // Per-frame encryption: Minimal overhead for real-time; fixed salt for shared key derivation
-  // Quantum resistance: Relies on AES-256's strength against quantum attacks
+  /**
+   * Create an encryption transform for WebRTC Insertable Streams.
+   * Use with RTCRtpSender.transform for E2EE video/audio calls.
+   *
+   * @param {string} password - Shared secret both peers must know
+   * @returns {Promise<Function>} Transform function for RTCRtpScriptTransform
+   */
   async createEncryptTransform(password) {
     const key = await this._deriveKey(password, WebCrypt.WEBRTC_SALT);
     return async (frame, controller) => {
@@ -339,6 +368,13 @@ export class WebCrypt {
     };
   }
 
+  /**
+   * Create a decryption transform for WebRTC Insertable Streams.
+   * Use with RTCRtpReceiver.transform for E2EE video/audio calls.
+   *
+   * @param {string} password - Must match sender's password
+   * @returns {Promise<Function>} Transform function for RTCRtpScriptTransform
+   */
   async createDecryptTransform(password) {
     const key = await this._deriveKey(password, WebCrypt.WEBRTC_SALT);
     return async (frame, controller) => {

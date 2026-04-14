@@ -153,6 +153,16 @@ declare class WebCrypt {
    * Utility to generate a cryptographically secure random password or key string.
    */
   generateRandomPassword(length?: number): string;
+
+  /**
+   * Clear entire key cache.
+   */
+  clearKeyCache(): void;
+
+  /**
+   * Stop automatic cache cleanup interval.
+   */
+  stopAutoCleanup(): void;
 }
 
 /**

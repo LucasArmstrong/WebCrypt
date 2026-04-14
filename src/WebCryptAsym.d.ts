@@ -244,7 +244,7 @@ declare class WebCryptAsym {
    * Derive a key using PBKDF2 with configurable parameters
    * @param password - The password to derive the key from
    * @param salt - Salt for the derivation
-   * @param iterations - Number of PBKDF2 iterations (default: 100000)
+   * @param iterations - Number of PBKDF2 iterations (default: 600000)
    * @param hash - Hash algorithm (default: SHA-256)
    * @param keyLength - Length of the derived key in bits
    */
@@ -389,6 +389,11 @@ declare class WebCryptAsym {
    */
   clearKeyCache(): void;
 
+  /**
+   * Stop automatic cache cleanup interval
+   */
+  stopAutoCleanup(): void;
+
   // ═══════════════════════════ Post-Quantum Key Derivation ═══════════════════════════
 
   /**
@@ -428,10 +433,8 @@ declare class WebCryptAsym {
    */
   deriveKeySHA3(
     password: string,
-    salt: Uint8Array,
     iterations?: number,
-    hash?: "SHA3-256" | "SHA3-384" | "SHA3-512",
-    keyLength?: number
+    algorithm?: "SHA3-256" | "SHA3-384" | "SHA3-512"
   ): Promise<CryptoKey>;
 
   /**
@@ -555,6 +558,77 @@ declare class WebCryptAsym {
    * Decrypts the data and automatically parses it back into a JavaScript object.
    */
   decryptData(b64: string, privateKey: CryptoKey): Promise<any>;
+
+  /**
+   * Sign a text message with a configurable algorithm
+   * @param text - Text to sign
+   * @param privateKey - Private key for signing
+   * @param algorithm - Signature algorithm: 'ECDSA' (default), 'RSA-PSS'
+   */
+  signTextWithAlgorithm(
+    text: string,
+    privateKey: CryptoKey,
+    algorithm?: "ECDSA" | "RSA-PSS"
+  ): Promise<string>;
+
+  /**
+   * Verify a signed text message with a configurable algorithm
+   * @param text - Text that was signed
+   * @param signatureB64 - Base64-encoded signature
+   * @param publicKey - Public key for verification
+   * @param algorithm - Signature algorithm: 'ECDSA' (default), 'RSA-PSS'
+   */
+  verifyTextWithAlgorithm(
+    text: string,
+    signatureB64: string,
+    publicKey: CryptoKey,
+    algorithm?: "ECDSA" | "RSA-PSS"
+  ): Promise<boolean>;
+
+  /**
+   * Generate a key with key rotation support
+   * @param password - Password to derive the key from
+   * @param salt - Salt for key derivation
+   * @param algorithm - Key derivation algorithm
+   * @param rotationCount - Rotation counter
+   */
+  generateRotatingKey(
+    password: string,
+    salt: Uint8Array,
+    algorithm?: "PBKDF2" | "Argon2",
+    rotationCount?: number
+  ): Promise<CryptoKey>;
+
+  /**
+   * Generate a hierarchical key structure from a master password
+   * @param masterPassword - Master password
+   * @param path - Path components for child keys
+   */
+  generateHierarchicalKey(
+    masterPassword: string,
+    path: string[]
+  ): Promise<{
+    masterKey: CryptoKey;
+    childKeys: { [key: string]: CryptoKey };
+  }>;
+
+  /**
+   * Generate a key from multiple combined inputs
+   * @param inputs - Array of input strings to combine
+   * @param salt - Salt for key derivation
+   * @param algorithm - Key derivation algorithm
+   */
+  generateKeyFromMultipleInputs(
+    inputs: string[],
+    salt: Uint8Array,
+    algorithm?: "PBKDF2" | "Argon2"
+  ): Promise<CryptoKey>;
+
+  /**
+   * Secure random number generation
+   * @param length - Number of bytes to generate
+   */
+  secureRandom(length: number): Promise<Uint8Array>;
 }
 
 export { WebCryptAsym };
