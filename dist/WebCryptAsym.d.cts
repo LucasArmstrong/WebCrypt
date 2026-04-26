@@ -653,5 +653,4 @@ declare class WebCryptAsym {
   decryptJWE(jweToken: string, privateKey: CryptoKey): Promise<any>;
 }
 
-export { WebCryptAsym };
-export default WebCryptAsym;
+export { WebCryptAsym, WebCryptAsym as default };

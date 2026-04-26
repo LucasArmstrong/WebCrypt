@@ -1,26 +1,122 @@
-// src/WebCryptAsym.js
-// version: 0.5.5
-import TimingSafeHelper from "./TimingSafeHelper.js"; // Add timing-safe helper for DoS protection and constant-time comparisons
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
+  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
+}) : x)(function(x) {
+  if (typeof require !== "undefined") return require.apply(this, arguments);
+  throw Error('Dynamic require of "' + x + '" is not supported');
+});
 
-/**
- * WebCryptAsym — RSA-4096 hybrid asymmetric encryption, digital signatures, and key exchange.
- *
- * Features:
- * - RSA-4096 hybrid text/file encryption (RSA-OAEP wraps ephemeral AES-256-GCM keys)
- * - ECDH key exchange (P-256 / P-384)
- * - Digital signatures (ECDSA, RSA-PSS, EdDSA stub)
- * - HMAC with configurable hash algorithms
- * - Multiple key derivation functions (PBKDF2, SHA-3, HKDF)
- * - WebRTC Insertable Streams E2EE with hybrid key exchange
- * - Key caching with TTL and LRU eviction
- *
- * @example
- * const crypt = new WebCryptAsym();
- * const keys = await crypt.generateKeyPair();
- * const encrypted = await crypt.encryptText("secret", keys.publicKey);
- * const decrypted = await crypt.decryptText(encrypted, keys.privateKey);
- */
-export class WebCryptAsym {
+// src/TimingSafeHelper.js
+var TimingSafeHelper = class {
+  /**
+   * Constant-time string comparison to prevent timing attacks
+   * @param {string} a - First string
+   * @param {string} b - Second string
+   * @returns {Promise<boolean>} True if strings are equal (in constant time)
+   */
+  static async constantTimeCompareStrings(a, b) {
+    const encoder = new TextEncoder();
+    const bufA = encoder.encode(a);
+    const bufB = encoder.encode(b);
+    const len = Math.max(bufA.length, bufB.length);
+    let diff = 0;
+    for (let i = 0; i < len; i++) {
+      if (i < bufA.length && i < bufB.length) {
+        diff |= bufA[i] ^ bufB[i];
+      } else {
+        diff |= 1;
+      }
+    }
+    return diff === 0;
+  }
+  /**
+   * Constant-time ArrayBuffer comparison to prevent timing attacks
+   * @param {ArrayBuffer} a - First buffer
+   * @param {ArrayBuffer} b - Second buffer
+   * @returns {Promise<boolean>} True if buffers are equal (in constant time)
+   */
+  static async constantTimeCompareBuffers(a, b) {
+    const bufA = new Uint8Array(a);
+    const bufB = new Uint8Array(b);
+    const len = Math.max(bufA.length, bufB.length);
+    let diff = 0;
+    for (let i = 0; i < len; i++) {
+      if (i < bufA.length && i < bufB.length) {
+        diff |= bufA[i] ^ bufB[i];
+      } else {
+        diff |= 1;
+      }
+    }
+    return diff === 0;
+  }
+  /**
+   * Execute dummy operations to pad execution time and prevent timing attacks
+   * @param {number} minMs - Minimum milliseconds to delay (e.g., 5-10ms)
+   */
+  static async sleepWithDummyOps(minMs = 10) {
+    const startTime = performance.now();
+    while (performance.now() - startTime < minMs) {
+      let dummy = 0;
+      for (let i = 0; i < 1e3; i++) {
+        dummy ^= Math.random() * 256 | 0;
+      }
+    }
+  }
+  /**
+   * Timing-safe signature verification wrapper
+   * Adds constant-time comparison and padding to prevent timing oracle attacks
+   * @param {any} crypto - Crypto API (subtle)
+   * @param {Object} algorithmParams - Algorithm parameters
+   * @param {CryptoKey} key - Verification key
+   * @param {ArrayBuffer} signature - Signature buffer
+   * @param {Uint8Array|ArrayBuffer} data - Data to verify
+   * @returns {Promise<boolean>} True if valid signature (with constant-time comparison)
+   */
+  static async timingSafeVerify(crypto, algorithmParams, key, signature, data) {
+    const startTime = performance.now();
+    let isValid;
+    try {
+      isValid = await crypto.subtle.verify(algorithmParams, key, signature, data);
+    } catch (e) {
+      throw new Error("Signature verification failed");
+    }
+    const minVerificationTimeMs = 10;
+    const elapsedMs = performance.now() - startTime;
+    if (elapsedMs < minVerificationTimeMs) {
+      await this.sleepWithDummyOps(minVerificationTimeMs - elapsedMs);
+    }
+    return isValid;
+  }
+  /**
+   * Timing-safe key derivation verification wrapper
+   * Ensures consistent timing regardless of password correctness
+   * @param {Function} deriveFn - Key derivation function
+   * @param {...any} args - Arguments to pass to derive function
+   * @returns {Promise<CryptoKey>} Derived key
+   */
+  static async timingSafeDerive(deriveFn, ...args) {
+    const startTime = performance.now();
+    let key;
+    try {
+      key = await deriveFn(...args);
+    } catch (e) {
+      const elapsedMs2 = performance.now() - startTime;
+      if (elapsedMs2 < 50) {
+        await this.sleepWithDummyOps(50 - elapsedMs2);
+      }
+      throw e;
+    }
+    const minDerivationTimeMs = 50;
+    const elapsedMs = performance.now() - startTime;
+    if (elapsedMs < minDerivationTimeMs) {
+      await this.sleepWithDummyOps(minDerivationTimeMs - elapsedMs);
+    }
+    return key;
+  }
+};
+var TimingSafeHelper_default = TimingSafeHelper;
+
+// src/WebCryptAsym.js
+var WebCryptAsym = class _WebCryptAsym {
   // Constants for RSA-4096 hybrid encryption
   // RSA provides strong classical security against current factoring attacks
   // Note: RSA is vulnerable to future quantum computers (Shor's algorithm); the hybrid design
@@ -32,80 +128,76 @@ export class WebCryptAsym {
   static RSA_KEY_PARAMS = {
     name: "RSA-OAEP",
     modulusLength: 4096,
-    publicExponent: new Uint8Array([1, 0, 1]), // 65537
-    hash: "SHA-256",
+    publicExponent: new Uint8Array([1, 0, 1]),
+    // 65537
+    hash: "SHA-256"
   };
-
   // Symmetric constants used in hybrid mode
-  static AES_ALGORITHM = "AES-GCM"; // Authenticated encryption with integrity
-  static AES_LENGTH = 256; // 256-bit key for full security (quantum-resistant)
-  static IV_LENGTH = 12; // 96-bit IV – GCM recommended size for optimal security/performance
-  static CHUNK_SIZE = 8 * 1024 * 1024; // 8MB chunks: balances memory usage and speed for multi-GB files
-
+  static AES_ALGORITHM = "AES-GCM";
+  // Authenticated encryption with integrity
+  static AES_LENGTH = 256;
+  // 256-bit key for full security (quantum-resistant)
+  static IV_LENGTH = 12;
+  // 96-bit IV – GCM recommended size for optimal security/performance
+  static CHUNK_SIZE = 8 * 1024 * 1024;
+  // 8MB chunks: balances memory usage and speed for multi-GB files
   // Digital signature constants (ECDSA – modern elliptic curve signatures)
   // ECDSA is faster and produces smaller signatures than RSA-PSS while offering equivalent security
   static SIGN_ALGORITHM = "ECDSA";
-  static SIGN_CURVE = "P-256"; // Default: NIST P-256 – fast, secure, universally supported
-  static SIGN_HASH = "SHA-256"; // Consistent hashing across the library
-  static SUPPORTED_CURVES = ["P-256", "P-384"]; // P-384 available for higher security needs
-
+  static SIGN_CURVE = "P-256";
+  // Default: NIST P-256 – fast, secure, universally supported
+  static SIGN_HASH = "SHA-256";
+  // Consistent hashing across the library
+  static SUPPORTED_CURVES = ["P-256", "P-384"];
+  // P-384 available for higher security needs
   // Additional signature algorithm constants
   static RSA_PSS_ALGORITHM = "RSA-PSS";
   static ED25519_ALGORITHM = "EdDSA";
   static ED25519_CURVE = "Ed25519";
-
   // Fixed salt for WebRTC key derivation: Ensures consistent session keys without explicit signaling
   static WEBRTC_SALT = new TextEncoder().encode("WebCryptAsym-E2EE-v1-2025");
-
   // Key Derivation Function constants
   static PBKDF2_ALGORITHM = "PBKDF2";
   static PBKDF2_HASH = "SHA-256";
   // ⚠️ INCREASED to OWASP 2023 recommended minimum of 600k iterations (was 100k)
-  static PBKDF2_ITERATIONS = 600_000;
-  static MAX_KEY_CACHE_SIZE = 10; // LRU cache max size
-  static KEY_CACHE_TTL_MS = 300_000; // 5 minutes TTL per key
+  static PBKDF2_ITERATIONS = 6e5;
+  static MAX_KEY_CACHE_SIZE = 10;
+  // LRU cache max size
+  static KEY_CACHE_TTL_MS = 3e5;
+  // 5 minutes TTL per key
   static ARGON2_ALGORITHM = "Argon2id";
-
   constructor() {
     this._crypto = this._getCrypto();
-    // Cache for frequently used keys to improve performance (with LRU eviction)
-    this._keyCache = new Map();
+    this._keyCache = /* @__PURE__ */ new Map();
     this._keyCacheCleanupInterval = null;
     this._startAutoCleanup();
   }
-
   /**
    * Start automatic cache cleanup every minute to remove expired keys
    */
   _startAutoCleanup() {
-    // Clean up immediately on start
     this._cleanupExpiredKeys();
-
-    // Then clean up every minute
     this._keyCacheCleanupInterval = setInterval(() => {
       this._cleanupExpiredKeys();
-    }, 60_000); // 1 minute
+    }, 6e4);
   }
-
   /**
    * Clean up expired keys from cache based on TTL
    */
   _cleanupExpiredKeys() {
     const now = Date.now();
     for (const [cacheKey, value] of this._keyCache.entries()) {
-      if (now - value.createdAt > WebCryptAsym.KEY_CACHE_TTL_MS) {
+      if (now - value.createdAt > _WebCryptAsym.KEY_CACHE_TTL_MS) {
         this._keyCache.delete(cacheKey);
       }
     }
   }
-
   /**
    * Clear entire key cache and securely erase all keys
    */
   clearKeyCache() {
     this._keyCache.clear();
   }
-
   /**
    * Stop automatic cleanup interval
    */
@@ -115,18 +207,14 @@ export class WebCryptAsym {
       this._keyCacheCleanupInterval = null;
     }
   }
-
   _getCrypto() {
-    // Browser environment
     if (typeof globalThis !== "undefined" && globalThis.crypto) return globalThis.crypto;
-    // Node.js 18+ (native Web Crypto API)
-    if (typeof require !== "undefined") {
-      const { webcrypto } = require("crypto");
+    if (typeof __require !== "undefined") {
+      const { webcrypto } = __require("crypto");
       return webcrypto;
     }
     throw new Error("Web Crypto API not available");
   }
-
   /**
    * Derive a key using PBKDF2 with configurable parameters
    * @param {string} password - The password to derive the key from
@@ -136,36 +224,28 @@ export class WebCryptAsym {
    * @param {number} [keyLength=256] - Length of the derived key in bits
    * @returns {Promise<CryptoKey>} Derived AES key for encrypt/decrypt
    */
-  async deriveKeyPBKDF2(
-    password,
-    salt,
-    iterations = WebCryptAsym.PBKDF2_ITERATIONS,
-    hash = WebCryptAsym.PBKDF2_HASH,
-    keyLength = 256
-  ) {
+  async deriveKeyPBKDF2(password, salt, iterations = _WebCryptAsym.PBKDF2_ITERATIONS, hash = _WebCryptAsym.PBKDF2_HASH, keyLength = 256) {
     const encoder = new TextEncoder();
     const keyMaterial = await this._crypto.subtle.importKey(
       "raw",
       encoder.encode(password),
-      { name: WebCryptAsym.PBKDF2_ALGORITHM },
+      { name: _WebCryptAsym.PBKDF2_ALGORITHM },
       false,
       ["deriveBits", "deriveKey"]
     );
-
     return await this._crypto.subtle.deriveKey(
       {
-        name: WebCryptAsym.PBKDF2_ALGORITHM,
-        salt: salt,
-        iterations: iterations,
-        hash: hash,
+        name: _WebCryptAsym.PBKDF2_ALGORITHM,
+        salt,
+        iterations,
+        hash
       },
       keyMaterial,
-      { name: WebCryptAsym.AES_ALGORITHM, length: keyLength },
+      { name: _WebCryptAsym.AES_ALGORITHM, length: keyLength },
       false,
       ["encrypt", "decrypt"]
     );
   }
-
   // ────────────────────── Safe Base64 Utilities ──────────────────────
   // Iterative conversion avoids recursion/stack overflow on large buffers
   // Significantly faster and more memory-efficient than common Array.join methods
@@ -177,7 +257,6 @@ export class WebCryptAsym {
     }
     return btoa(binary);
   }
-
   _base64ToArrayBuffer(base64) {
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
@@ -186,7 +265,6 @@ export class WebCryptAsym {
     }
     return bytes.buffer;
   }
-
   /**
    * ⚠️ WARNING: Argon2id is NOT natively supported by Web Crypto API!
    *
@@ -205,53 +283,44 @@ export class WebCryptAsym {
    */
   async deriveKeyArgon2(password, salt, options = {}) {
     console.warn(
-      "⚠️ CRITICAL: Argon2id is NOT supported by Web Crypto API. " +
-        "Falling back to PBKDF2 with high iterations (still weaker than true Argon2). " +
-        "For production use, install argon2-browser package and use it directly."
+      "\u26A0\uFE0F CRITICAL: Argon2id is NOT supported by Web Crypto API. Falling back to PBKDF2 with high iterations (still weaker than true Argon2). For production use, install argon2-browser package and use it directly."
     );
-
-    // Force strong PBKDF2 fallback since Argon2 is unavailable
     return await this.deriveKeyPBKDF2(
       password,
       salt,
-      1000000, // 1M iterations (stronger than default 600k)
+      1e6,
+      // 1M iterations (stronger than default 600k)
       "SHA-256"
     );
   }
-
   // ────────────────────── RSA Key Management (for Hybrid Encryption) ──────────────────────
   // Generates 4096-bit RSA key pair: Secure against classical factoring attacks (e.g., GNFS)
   async generateKeyPair() {
-    return await this._crypto.subtle.generateKey(WebCryptAsym.RSA_KEY_PARAMS, true, [
+    return await this._crypto.subtle.generateKey(_WebCryptAsym.RSA_KEY_PARAMS, true, [
       "encrypt",
-      "decrypt",
+      "decrypt"
     ]);
   }
-
   async exportPublicKey(publicKey) {
     const exported = await this._crypto.subtle.exportKey("spki", publicKey);
     return this._arrayBufferToBase64(exported);
   }
-
   async exportPrivateKey(privateKey) {
     const exported = await this._crypto.subtle.exportKey("pkcs8", privateKey);
     return this._arrayBufferToBase64(exported);
   }
-
   async importPublicKey(b64) {
     const binary = this._base64ToArrayBuffer(b64);
-    return await this._crypto.subtle.importKey("spki", binary, WebCryptAsym.RSA_ALGORITHM, true, [
-      "encrypt",
+    return await this._crypto.subtle.importKey("spki", binary, _WebCryptAsym.RSA_ALGORITHM, true, [
+      "encrypt"
     ]);
   }
-
   async importPrivateKey(b64) {
     const binary = this._base64ToArrayBuffer(b64);
-    return await this._crypto.subtle.importKey("pkcs8", binary, WebCryptAsym.RSA_ALGORITHM, true, [
-      "decrypt",
+    return await this._crypto.subtle.importKey("pkcs8", binary, _WebCryptAsym.RSA_ALGORITHM, true, [
+      "decrypt"
     ]);
   }
-
   /**
    * Get a cached key to improve performance
    * @param {string} cacheKey - Key for caching
@@ -260,7 +329,6 @@ export class WebCryptAsym {
   _getCachedKey(cacheKey) {
     return this._keyCache.get(cacheKey) || null;
   }
-
   /**
    * Cache a key for future use
    * @param {string} cacheKey - Key for caching
@@ -269,107 +337,81 @@ export class WebCryptAsym {
   _cacheKey(cacheKey, key) {
     this._keyCache.set(cacheKey, key);
   }
-
   // ────────────────────── Hybrid Text Encryption/Decryption ──────────────────────
   // Hybrid design: RSA encrypts a random AES key, AES encrypts the actual data
   // Provides quantum-resistant confidentiality via AES-256 while enabling public-key sharing
   async encryptText(text, publicKey) {
     const data = new TextEncoder().encode(text);
-
-    // Generate ephemeral AES-256-GCM key for this message
     const aesKey = await this._crypto.subtle.generateKey(
-      { name: WebCryptAsym.AES_ALGORITHM, length: WebCryptAsym.AES_LENGTH },
+      { name: _WebCryptAsym.AES_ALGORITHM, length: _WebCryptAsym.AES_LENGTH },
       true,
       ["encrypt"]
     );
-
     const exportedAesKey = await this._crypto.subtle.exportKey("raw", aesKey);
-    const iv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
-
-    // Encrypt the AES key with recipient's RSA public key
+    const iv = this._crypto.getRandomValues(new Uint8Array(_WebCryptAsym.IV_LENGTH));
     const encryptedAesKey = await this._crypto.subtle.encrypt(
-      WebCryptAsym.RSA_ALGORITHM,
+      _WebCryptAsym.RSA_ALGORITHM,
       publicKey,
       exportedAesKey
     );
-
     const encryptedData = await this._crypto.subtle.encrypt(
-      { name: WebCryptAsym.AES_ALGORITHM, iv },
+      { name: _WebCryptAsym.AES_ALGORITHM, iv },
       aesKey,
       data
     );
-
-    // Format: [4-byte length][encrypted AES key][IV][ciphertext]
     const encKeyBytes = new Uint8Array(encryptedAesKey);
     const encKeyLen = encKeyBytes.byteLength;
     const result = new Uint8Array(
-      4 + encKeyLen + WebCryptAsym.IV_LENGTH + encryptedData.byteLength
+      4 + encKeyLen + _WebCryptAsym.IV_LENGTH + encryptedData.byteLength
     );
-
     new DataView(result.buffer).setUint32(0, encKeyLen, true);
     result.set(encKeyBytes, 4);
     result.set(iv, 4 + encKeyLen);
-    result.set(new Uint8Array(encryptedData), 4 + encKeyLen + WebCryptAsym.IV_LENGTH);
-
+    result.set(new Uint8Array(encryptedData), 4 + encKeyLen + _WebCryptAsym.IV_LENGTH);
     return this._arrayBufferToBase64(result.buffer);
   }
-
   async decryptText(encryptedB64, privateKey) {
     try {
-      // Input validation for DoS protection
       if (typeof encryptedB64 !== "string") throw new Error("Invalid input");
-
       const combined = new Uint8Array(this._base64ToArrayBuffer(encryptedB64));
-
-      // Check size limits to prevent memory exhaustion
-      if (combined.byteLength > WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
+      if (combined.byteLength > _WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
         throw new Error("Decryption failed");
       }
-
-      if (combined.byteLength < 4 + 100 + WebCryptAsym.IV_LENGTH) {
+      if (combined.byteLength < 4 + 100 + _WebCryptAsym.IV_LENGTH) {
         throw new Error("Invalid input");
       }
-
       const encKeyLen = new DataView(combined.buffer).getUint32(0, true);
-      if (combined.byteLength < 4 + encKeyLen + WebCryptAsym.IV_LENGTH) {
+      if (combined.byteLength < 4 + encKeyLen + _WebCryptAsym.IV_LENGTH) {
         throw new Error("Decryption failed");
       }
-
       const encryptedAesKey = combined.slice(4, 4 + encKeyLen);
-      const iv = combined.slice(4 + encKeyLen, 4 + encKeyLen + WebCryptAsym.IV_LENGTH);
-      const ciphertext = combined.slice(4 + encKeyLen + WebCryptAsym.IV_LENGTH);
-
-      // Decrypt the AES key using own RSA private key
+      const iv = combined.slice(4 + encKeyLen, 4 + encKeyLen + _WebCryptAsym.IV_LENGTH);
+      const ciphertext = combined.slice(4 + encKeyLen + _WebCryptAsym.IV_LENGTH);
       const aesKeyRaw = await this._crypto.subtle.decrypt(
-        WebCryptAsym.RSA_ALGORITHM,
+        _WebCryptAsym.RSA_ALGORITHM,
         privateKey,
         encryptedAesKey
       );
-
       const aesKey = await this._crypto.subtle.importKey(
         "raw",
         aesKeyRaw,
-        { name: WebCryptAsym.AES_ALGORITHM },
+        { name: _WebCryptAsym.AES_ALGORITHM },
         false,
         ["decrypt"]
       );
-
       const decrypted = await this._crypto.subtle.decrypt(
-        { name: WebCryptAsym.AES_ALGORITHM, iv },
+        { name: _WebCryptAsym.AES_ALGORITHM, iv },
         aesKey,
         ciphertext
       );
-
       return new TextDecoder().decode(decrypted);
     } catch (e) {
-      // Log detailed error only in development
       if (typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production") {
         console.warn("WebCryptAsym decryptText failed:", e.message);
       }
       throw e;
     }
   }
-
   /**
    * Generate a key for symmetric encryption using password-based derivation
    * @param {string} password - Password to derive the key from
@@ -384,164 +426,129 @@ export class WebCryptAsym {
       return await this.deriveKeyPBKDF2(password, salt);
     }
   }
-
   // ────────────────────── Hybrid File Encryption/Decryption (streaming) ──────────────────────
   // Streaming processes large files in 8MB chunks – constant memory usage even for 10GB+ files
   // Counter-mode IV derivation ensures unique nonces without storing per-chunk IVs
   async encryptFile(fileOrBlob, publicKey) {
     const aesKey = await this._crypto.subtle.generateKey(
-      { name: WebCryptAsym.AES_ALGORITHM, length: WebCryptAsym.AES_LENGTH },
+      { name: _WebCryptAsym.AES_ALGORITHM, length: _WebCryptAsym.AES_LENGTH },
       true,
       ["encrypt"]
     );
-
     const exportedAesKey = await this._crypto.subtle.exportKey("raw", aesKey);
-    const baseIv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
-
+    const baseIv = this._crypto.getRandomValues(new Uint8Array(_WebCryptAsym.IV_LENGTH));
     const encryptedAesKey = await this._crypto.subtle.encrypt(
-      WebCryptAsym.RSA_ALGORITHM,
+      _WebCryptAsym.RSA_ALGORITHM,
       publicKey,
       exportedAesKey
     );
-
-    // Header format: [4-byte length][encrypted AES key][base IV]
     const encKeyBytes = new Uint8Array(encryptedAesKey);
-    const header = new Uint8Array(4 + encKeyBytes.byteLength + WebCryptAsym.IV_LENGTH);
+    const header = new Uint8Array(4 + encKeyBytes.byteLength + _WebCryptAsym.IV_LENGTH);
     new DataView(header.buffer).setUint32(0, encKeyBytes.byteLength, true);
     header.set(encKeyBytes, 4);
     header.set(baseIv, 4 + encKeyBytes.byteLength);
-
     const chunks = [header];
     const reader = fileOrBlob.stream().getReader();
     let counter = 0;
-
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
-      const iv = new Uint8Array(WebCryptAsym.IV_LENGTH);
+      const iv = new Uint8Array(_WebCryptAsym.IV_LENGTH);
       iv.set(baseIv);
-      // Deterministic counter in last 4 bytes ensures unique IV per chunk
-      new DataView(iv.buffer).setUint32(WebCryptAsym.IV_LENGTH - 4, counter++, true);
-
+      new DataView(iv.buffer).setUint32(_WebCryptAsym.IV_LENGTH - 4, counter++, true);
       const encrypted = await this._crypto.subtle.encrypt(
-        { name: WebCryptAsym.AES_ALGORITHM, iv },
+        { name: _WebCryptAsym.AES_ALGORITHM, iv },
         aesKey,
         value
       );
       chunks.push(encrypted);
     }
-
     const filename = (fileOrBlob.name || "encrypted") + ".asym-encrypted";
     const newBlob = new Blob(chunks);
     newBlob.name = filename;
     return { blob: newBlob, filename };
   }
-
   // Maximum allowed encrypted data size (10MB) to prevent DoS attacks
   static MAX_ENCRYPTED_DATA_SIZE = 10 * 1024 * 1024;
-
   async decryptFile(fileOrBlob, privateKey) {
-    // DoS protection: Check file size before loading into memory
-    const fileSize = fileOrBlob.size || (fileOrBlob.blob && fileOrBlob.blob.size);
-    if (fileSize && fileSize > WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
+    const fileSize = fileOrBlob.size || fileOrBlob.blob && fileOrBlob.blob.size;
+    if (fileSize && fileSize > _WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
       throw new Error("File too large for decryption");
     }
-
     const data = new Uint8Array(await fileOrBlob.arrayBuffer());
-
-    // DoS protection: Check size after loading
-    if (data.length > WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
+    if (data.length > _WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
       throw new Error("File too large for decryption");
     }
-
-    if (data.length < 4 + 100 + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
-
+    if (data.length < 4 + 100 + _WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
     const encKeyLen = new DataView(data.buffer).getUint32(0, true);
-    if (data.length < 4 + encKeyLen + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
-
+    if (data.length < 4 + encKeyLen + _WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
     const encryptedAesKey = data.slice(4, 4 + encKeyLen);
-    const baseIv = data.slice(4 + encKeyLen, 4 + encKeyLen + WebCryptAsym.IV_LENGTH);
-    const ciphertext = data.slice(4 + encKeyLen + WebCryptAsym.IV_LENGTH);
-
+    const baseIv = data.slice(4 + encKeyLen, 4 + encKeyLen + _WebCryptAsym.IV_LENGTH);
+    const ciphertext = data.slice(4 + encKeyLen + _WebCryptAsym.IV_LENGTH);
     const aesKeyRaw = await this._crypto.subtle.decrypt(
-      WebCryptAsym.RSA_ALGORITHM,
+      _WebCryptAsym.RSA_ALGORITHM,
       privateKey,
       encryptedAesKey
     );
-
     const aesKey = await this._crypto.subtle.importKey(
       "raw",
       aesKeyRaw,
-      { name: WebCryptAsym.AES_ALGORITHM },
+      { name: _WebCryptAsym.AES_ALGORITHM },
       false,
       ["decrypt"]
     );
-
     const chunks = [];
     let offset = 0;
     let counter = 0;
-
     while (offset < ciphertext.byteLength) {
-      const size = Math.min(WebCryptAsym.CHUNK_SIZE, ciphertext.byteLength - offset);
+      const size = Math.min(_WebCryptAsym.CHUNK_SIZE, ciphertext.byteLength - offset);
       const chunk = ciphertext.slice(offset, offset + size);
-
-      const iv = new Uint8Array(WebCryptAsym.IV_LENGTH);
+      const iv = new Uint8Array(_WebCryptAsym.IV_LENGTH);
       iv.set(baseIv);
-      new DataView(iv.buffer).setUint32(WebCryptAsym.IV_LENGTH - 4, counter++, true);
-
+      new DataView(iv.buffer).setUint32(_WebCryptAsym.IV_LENGTH - 4, counter++, true);
       const decrypted = await this._crypto.subtle.decrypt(
-        { name: WebCryptAsym.AES_ALGORITHM, iv },
+        { name: _WebCryptAsym.AES_ALGORITHM, iv },
         aesKey,
         chunk
       );
       chunks.push(decrypted);
       offset += size;
     }
-
     const filename = (fileOrBlob.name || fileOrBlob.filename || "decrypted").replace(
       /\.asym-encrypted$/i,
       ""
     );
     return { blob: new Blob(chunks), filename };
   }
-
   // ────────────────────── WebRTC Insertable Streams (hybrid key exchange) ──────────────────────
   // Uses RSA to securely exchange a random session key in the first video/audio frame
   // Subsequent frames use lightweight AES-GCM – minimal overhead for real-time E2EE
   async createEncryptTransform(publicKey) {
     const sessionKey = await this._crypto.subtle.generateKey(
-      { name: WebCryptAsym.AES_ALGORITHM, length: WebCryptAsym.AES_LENGTH },
+      { name: _WebCryptAsym.AES_ALGORITHM, length: _WebCryptAsym.AES_LENGTH },
       true,
       ["encrypt"]
     );
     const exportedSession = await this._crypto.subtle.exportKey("raw", sessionKey);
-
     const encryptedSessionKey = await this._crypto.subtle.encrypt(
-      WebCryptAsym.RSA_ALGORITHM,
+      _WebCryptAsym.RSA_ALGORITHM,
       publicKey,
       exportedSession
     );
-
     let first = true;
-
     return async (frame, controller) => {
-      const iv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
-
+      const iv = this._crypto.getRandomValues(new Uint8Array(_WebCryptAsym.IV_LENGTH));
       if (first) {
-        // First frame carries encrypted session key + IV + payload
         const encSession = new Uint8Array(encryptedSessionKey);
-        const header = new Uint8Array(4 + encSession.byteLength + WebCryptAsym.IV_LENGTH);
+        const header = new Uint8Array(4 + encSession.byteLength + _WebCryptAsym.IV_LENGTH);
         new DataView(header.buffer).setUint32(0, encSession.byteLength, true);
         header.set(encSession, 4);
         header.set(iv, 4 + encSession.byteLength);
-
         const encrypted = await this._crypto.subtle.encrypt(
-          { name: WebCryptAsym.AES_ALGORITHM, iv },
+          { name: _WebCryptAsym.AES_ALGORITHM, iv },
           sessionKey,
           frame.data
         );
-
         const newData = new Uint8Array(header.byteLength + encrypted.byteLength);
         newData.set(header, 0);
         newData.set(new Uint8Array(encrypted), header.byteLength);
@@ -549,60 +556,53 @@ export class WebCryptAsym {
         first = false;
       } else {
         const encrypted = await this._crypto.subtle.encrypt(
-          { name: WebCryptAsym.AES_ALGORITHM, iv },
+          { name: _WebCryptAsym.AES_ALGORITHM, iv },
           sessionKey,
           frame.data
         );
-
-        const newData = new Uint8Array(WebCryptAsym.IV_LENGTH + encrypted.byteLength);
+        const newData = new Uint8Array(_WebCryptAsym.IV_LENGTH + encrypted.byteLength);
         newData.set(iv, 0);
-        newData.set(new Uint8Array(encrypted), WebCryptAsym.IV_LENGTH);
+        newData.set(new Uint8Array(encrypted), _WebCryptAsym.IV_LENGTH);
         frame.data = newData.buffer;
       }
       controller.enqueue(frame);
     };
   }
-
   async createDecryptTransform(privateKey) {
     let sessionKey = null;
     let first = true;
-
     return async (frame, controller) => {
       const data = new Uint8Array(frame.data);
-
       if (first) {
-        if (data.byteLength < 4 + 100 + WebCryptAsym.IV_LENGTH) {
+        if (data.byteLength < 4 + 100 + _WebCryptAsym.IV_LENGTH) {
           console.warn("Invalid first frame");
           controller.enqueue(frame);
           return;
         }
         const encKeyLen = new DataView(data.buffer).getUint32(0, true);
-        if (data.byteLength < 4 + encKeyLen + WebCryptAsym.IV_LENGTH) {
+        if (data.byteLength < 4 + encKeyLen + _WebCryptAsym.IV_LENGTH) {
           console.warn("Truncated first frame");
           controller.enqueue(frame);
           return;
         }
-
         const encryptedSessionKey = data.slice(4, 4 + encKeyLen);
-        const iv = data.slice(4 + encKeyLen, 4 + encKeyLen + WebCryptAsym.IV_LENGTH);
-        const ciphertext = data.slice(4 + encKeyLen + WebCryptAsym.IV_LENGTH);
-
+        const iv = data.slice(4 + encKeyLen, 4 + encKeyLen + _WebCryptAsym.IV_LENGTH);
+        const ciphertext = data.slice(4 + encKeyLen + _WebCryptAsym.IV_LENGTH);
         try {
           const sessionKeyRaw = await this._crypto.subtle.decrypt(
-            WebCryptAsym.RSA_ALGORITHM,
+            _WebCryptAsym.RSA_ALGORITHM,
             privateKey,
             encryptedSessionKey
           );
           sessionKey = await this._crypto.subtle.importKey(
             "raw",
             sessionKeyRaw,
-            { name: WebCryptAsym.AES_ALGORITHM },
+            { name: _WebCryptAsym.AES_ALGORITHM },
             false,
             ["decrypt"]
           );
-
           const decrypted = await this._crypto.subtle.decrypt(
-            { name: WebCryptAsym.AES_ALGORITHM, iv },
+            { name: _WebCryptAsym.AES_ALGORITHM, iv },
             sessionKey,
             ciphertext
           );
@@ -612,22 +612,20 @@ export class WebCryptAsym {
         }
         first = false;
       } else {
-        if (data.byteLength < WebCryptAsym.IV_LENGTH) {
+        if (data.byteLength < _WebCryptAsym.IV_LENGTH) {
           controller.enqueue(frame);
           return;
         }
-        const iv = data.slice(0, WebCryptAsym.IV_LENGTH);
-        const ciphertext = data.slice(WebCryptAsym.IV_LENGTH);
-
+        const iv = data.slice(0, _WebCryptAsym.IV_LENGTH);
+        const ciphertext = data.slice(_WebCryptAsym.IV_LENGTH);
         if (!sessionKey) {
           console.warn("No session key for decryption");
           controller.enqueue(frame);
           return;
         }
-
         try {
           const decrypted = await this._crypto.subtle.decrypt(
-            { name: WebCryptAsym.AES_ALGORITHM, iv },
+            { name: _WebCryptAsym.AES_ALGORITHM, iv },
             sessionKey,
             ciphertext
           );
@@ -639,42 +637,37 @@ export class WebCryptAsym {
       controller.enqueue(frame);
     };
   }
-
   // ────────────────────── Digital Signatures (ECDSA) ──────────────────────
   // Provides authenticity, integrity, and non-repudiation
   // Ideal for signed messages, authenticated file transfers, or combined encrypt-then-sign workflows
-
   /**
    * Generate an ECDSA signing key pair
    * @param {string} [curve='P-256'] - Supported: 'P-256' (default), 'P-384'
    * @returns {Promise<{publicKey: CryptoKey, privateKey: CryptoKey, publicKeyB64: string}>}
    */
-  async generateSigningKeyPair(curve = WebCryptAsym.SIGN_CURVE) {
-    if (!WebCryptAsym.SUPPORTED_CURVES.includes(curve)) {
+  async generateSigningKeyPair(curve = _WebCryptAsym.SIGN_CURVE) {
+    if (!_WebCryptAsym.SUPPORTED_CURVES.includes(curve)) {
       throw new Error(
-        `Unsupported curve: ${curve}. Use one of: ${WebCryptAsym.SUPPORTED_CURVES.join(", ")}`
+        `Unsupported curve: ${curve}. Use one of: ${_WebCryptAsym.SUPPORTED_CURVES.join(", ")}`
       );
     }
-
     const keyPair = await this._crypto.subtle.generateKey(
       {
-        name: WebCryptAsym.SIGN_ALGORITHM,
-        namedCurve: curve,
+        name: _WebCryptAsym.SIGN_ALGORITHM,
+        namedCurve: curve
       },
-      true, // extractable
+      true,
+      // extractable
       ["sign", "verify"]
     );
-
     const publicKeyExported = await this._crypto.subtle.exportKey("spki", keyPair.publicKey);
     const publicKeyB64 = this._arrayBufferToBase64(publicKeyExported);
-
     return {
       publicKey: keyPair.publicKey,
       privateKey: keyPair.privateKey,
-      publicKeyB64,
+      publicKeyB64
     };
   }
-
   /**
    * Generate an EdDSA signing key pair
    * @returns {Promise<{publicKey: CryptoKey, privateKey: CryptoKey, publicKeyB64: string}>}
@@ -682,23 +675,21 @@ export class WebCryptAsym {
   async generateEdDSASigningKeyPair() {
     const keyPair = await this._crypto.subtle.generateKey(
       {
-        name: WebCryptAsym.ED25519_ALGORITHM,
-        namedCurve: WebCryptAsym.ED25519_CURVE,
+        name: _WebCryptAsym.ED25519_ALGORITHM,
+        namedCurve: _WebCryptAsym.ED25519_CURVE
       },
-      true, // extractable
+      true,
+      // extractable
       ["sign", "verify"]
     );
-
     const publicKeyExported = await this._crypto.subtle.exportKey("spki", keyPair.publicKey);
     const publicKeyB64 = this._arrayBufferToBase64(publicKeyExported);
-
     return {
       publicKey: keyPair.publicKey,
       privateKey: keyPair.privateKey,
-      publicKeyB64,
+      publicKeyB64
     };
   }
-
   /**
    * Generate an RSA-PSS signing key pair
    * @param {number} [modulusLength=2048] - RSA key size in bits (default: 2048)
@@ -706,41 +697,37 @@ export class WebCryptAsym {
    */
   async generateRSAPSSigningKeyPair(modulusLength = 2048) {
     const rsaParams = {
-      name: WebCryptAsym.RSA_PSS_ALGORITHM,
-      modulusLength: modulusLength,
-      publicExponent: new Uint8Array([1, 0, 1]), // 65537
-      hash: WebCryptAsym.SIGN_HASH,
+      name: _WebCryptAsym.RSA_PSS_ALGORITHM,
+      modulusLength,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      // 65537
+      hash: _WebCryptAsym.SIGN_HASH
     };
-
     const keyPair = await this._crypto.subtle.generateKey(rsaParams, true, ["sign", "verify"]);
-
     const publicKeyExported = await this._crypto.subtle.exportKey("spki", keyPair.publicKey);
     const publicKeyB64 = this._arrayBufferToBase64(publicKeyExported);
-
     return {
       publicKey: keyPair.publicKey,
       privateKey: keyPair.privateKey,
-      publicKeyB64,
+      publicKeyB64
     };
   }
-
   /**
    * Import a public signing key from base64 (SPKI format)
    * @param {string} publicKeyB64
    * @param {string} [curve='P-256']
    * @returns {Promise<CryptoKey>}
    */
-  async importPublicSigningKey(publicKeyB64, curve = WebCryptAsym.SIGN_CURVE) {
+  async importPublicSigningKey(publicKeyB64, curve = _WebCryptAsym.SIGN_CURVE) {
     const publicKeyBuffer = this._base64ToArrayBuffer(publicKeyB64);
     return await this._crypto.subtle.importKey(
       "spki",
       publicKeyBuffer,
-      { name: WebCryptAsym.SIGN_ALGORITHM, namedCurve: curve },
+      { name: _WebCryptAsym.SIGN_ALGORITHM, namedCurve: curve },
       true,
       ["verify"]
     );
   }
-
   /**
    * Sign a text message or data string
    * @param {string} text
@@ -751,15 +738,14 @@ export class WebCryptAsym {
     const data = new TextEncoder().encode(text);
     const signature = await this._crypto.subtle.sign(
       {
-        name: WebCryptAsym.SIGN_ALGORITHM,
-        hash: { name: WebCryptAsym.SIGN_HASH },
+        name: _WebCryptAsym.SIGN_ALGORITHM,
+        hash: { name: _WebCryptAsym.SIGN_HASH }
       },
       privateKey,
       data
     );
     return this._arrayBufferToBase64(signature);
   }
-
   /**
    * Verify a signed text message
    * @param {string} text
@@ -770,20 +756,17 @@ export class WebCryptAsym {
   async verifyText(text, signatureB64, publicKey) {
     const data = new TextEncoder().encode(text);
     const signature = this._base64ToArrayBuffer(signatureB64);
-
-    // Timing-safe verification to prevent timing oracle attacks
-    return await TimingSafeHelper.timingSafeVerify(
+    return await TimingSafeHelper_default.timingSafeVerify(
       this._crypto,
       {
-        name: WebCryptAsym.SIGN_ALGORITHM,
-        hash: { name: WebCryptAsym.SIGN_HASH },
+        name: _WebCryptAsym.SIGN_ALGORITHM,
+        hash: { name: _WebCryptAsym.SIGN_HASH }
       },
       publicKey,
       signature,
       data
     );
   }
-
   /**
    * Create a detached signature for a file or blob
    * Uses hash-then-sign pattern: efficient and secure for arbitrary-size data
@@ -793,21 +776,18 @@ export class WebCryptAsym {
    */
   async signFile(fileOrBlob, privateKey) {
     const data = await fileOrBlob.arrayBuffer();
-    const hashBuffer = await this._crypto.subtle.digest(WebCryptAsym.SIGN_HASH, data);
-
+    const hashBuffer = await this._crypto.subtle.digest(_WebCryptAsym.SIGN_HASH, data);
     const signature = await this._crypto.subtle.sign(
       {
-        name: WebCryptAsym.SIGN_ALGORITHM,
-        hash: { name: WebCryptAsym.SIGN_HASH },
+        name: _WebCryptAsym.SIGN_ALGORITHM,
+        hash: { name: _WebCryptAsym.SIGN_HASH }
       },
       privateKey,
       hashBuffer
     );
-
     const signatureB64 = this._arrayBufferToBase64(signature);
     return { signatureB64, blob: fileOrBlob };
   }
-
   /**
    * Generate a new key for symmetric encryption using password-based derivation with key rotation
    * @param {string} password - Password to derive the key from
@@ -817,19 +797,16 @@ export class WebCryptAsym {
    * @returns {Promise<CryptoKey>} Generated symmetric key
    */
   async generateRotatingKey(password, salt, algorithm = "PBKDF2", rotationCount = 0) {
-    // Add rotation counter to salt to create a unique salt for each rotation
     const rotatedSalt = new Uint8Array(salt.length + 4);
     rotatedSalt.set(salt);
     const view = new DataView(rotatedSalt.buffer);
     view.setUint32(rotatedSalt.length - 4, rotationCount, true);
-
     if (algorithm === "Argon2") {
       return await this.deriveKeyArgon2(password, rotatedSalt);
     } else {
       return await this.deriveKeyPBKDF2(password, rotatedSalt);
     }
   }
-
   /**
    * Generate a hierarchical key structure
    * @param {string} masterPassword - Master password for the hierarchy
@@ -839,16 +816,13 @@ export class WebCryptAsym {
   async generateHierarchicalKey(masterPassword, path) {
     const masterSalt = new TextEncoder().encode("WebCryptAsym-master-key-salt");
     const masterKey = await this.generateKeyFromPassword(masterPassword, masterSalt);
-
     const childKeys = {};
     for (let i = 0; i < path.length; i++) {
       const childSalt = new TextEncoder().encode(`WebCryptAsym-child-key-${path[i]}-salt`);
       childKeys[path[i]] = await this.generateKeyFromPassword(masterPassword, childSalt);
     }
-
     return { masterKey, childKeys };
   }
-
   /**
    * Verify a detached file/blob signature
    * Recomputes hash and checks against provided signature
@@ -860,22 +834,18 @@ export class WebCryptAsym {
   async verifyFile(fileOrBlob, signatureB64, publicKey) {
     const data = await fileOrBlob.arrayBuffer();
     const signature = this._base64ToArrayBuffer(signatureB64);
-
-    const hashBuffer = await this._crypto.subtle.digest(WebCryptAsym.SIGN_HASH, data);
-
-    // Timing-safe verification to prevent timing oracle attacks
-    return await TimingSafeHelper.timingSafeVerify(
+    const hashBuffer = await this._crypto.subtle.digest(_WebCryptAsym.SIGN_HASH, data);
+    return await TimingSafeHelper_default.timingSafeVerify(
       this._crypto,
       {
-        name: WebCryptAsym.SIGN_ALGORITHM,
-        hash: { name: WebCryptAsym.SIGN_HASH },
+        name: _WebCryptAsym.SIGN_ALGORITHM,
+        hash: { name: _WebCryptAsym.SIGN_HASH }
       },
       publicKey,
       signature,
       hashBuffer
     );
   }
-
   /**
    * Create an HMAC signature using configurable hash algorithms
    * @param {string} data - Data to sign
@@ -886,19 +856,16 @@ export class WebCryptAsym {
   async signHMAC(data, key, hash = "SHA-256") {
     const encoder = new TextEncoder();
     const encodedData = encoder.encode(data);
-
     const signature = await this._crypto.subtle.sign(
       {
         name: "HMAC",
-        hash: { name: hash },
+        hash: { name: hash }
       },
       key,
       encodedData
     );
-
     return this._arrayBufferToBase64(signature);
   }
-
   /**
    * Verify an HMAC signature using configurable hash algorithms
    * @param {string} data - Data that was signed
@@ -911,20 +878,17 @@ export class WebCryptAsym {
     const encoder = new TextEncoder();
     const encodedData = encoder.encode(data);
     const signature = this._base64ToArrayBuffer(signatureB64);
-
-    // Timing-safe verification to prevent timing oracle attacks
-    return await TimingSafeHelper.timingSafeVerify(
+    return await TimingSafeHelper_default.timingSafeVerify(
       this._crypto,
       {
         name: "HMAC",
-        hash: { name: hash },
+        hash: { name: hash }
       },
       key,
       signature,
       encodedData
     );
   }
-
   /**
    * Generate a Poly1305 authentication tag
    * @param {ArrayBuffer} data - Data to authenticate
@@ -932,19 +896,15 @@ export class WebCryptAsym {
    * @returns {Promise<string>} Base64-encoded authentication tag
    */
   async authenticatePoly1305(data, key) {
-    // Note: Poly1305 is typically used in combination with ChaCha20 for AEAD
-    // This implementation provides a basic interface for Poly1305 usage
     const tag = await this._crypto.subtle.sign(
       {
-        name: "Poly1305",
+        name: "Poly1305"
       },
       key,
       data
     );
-
     return this._arrayBufferToBase64(tag);
   }
-
   /**
    * Create a hybrid encryption transform that supports both classical and post-quantum approaches
    * @param {CryptoKey} publicKey - RSA public key for hybrid encryption
@@ -953,14 +913,11 @@ export class WebCryptAsym {
    */
   async createHybridEncryptTransform(publicKey, usePostQuantum = false) {
     if (usePostQuantum) {
-      // For post-quantum hybrid: use both RSA and a post-quantum key exchange
       return await this._createPostQuantumHybridEncryptTransform(publicKey);
     } else {
-      // Standard hybrid encryption
       return await this.createEncryptTransform(publicKey);
     }
   }
-
   /**
    * Create a post-quantum hybrid encryption transform (internal implementation)
    * @param {CryptoKey} publicKey - RSA public key for hybrid encryption
@@ -968,58 +925,46 @@ export class WebCryptAsym {
    */
   async _createPostQuantumHybridEncryptTransform(publicKey) {
     const sessionKey = await this._crypto.subtle.generateKey(
-      { name: WebCryptAsym.AES_ALGORITHM, length: WebCryptAsym.AES_LENGTH },
+      { name: _WebCryptAsym.AES_ALGORITHM, length: _WebCryptAsym.AES_LENGTH },
       true,
       ["encrypt"]
     );
     const exportedSession = await this._crypto.subtle.exportKey("raw", sessionKey);
-
-    // Use both RSA and a post-quantum key exchange (simulated)
     const encryptedSessionKey = await this._crypto.subtle.encrypt(
-      WebCryptAsym.RSA_ALGORITHM,
+      _WebCryptAsym.RSA_ALGORITHM,
       publicKey,
       exportedSession
     );
-
     let first = true;
-
     return async (frame, controller) => {
-      const iv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
-
+      const iv = this._crypto.getRandomValues(new Uint8Array(_WebCryptAsym.IV_LENGTH));
       if (first) {
-        // First frame carries encrypted session key + IV + payload
         const encSession = new Uint8Array(encryptedSessionKey);
-        const header = new Uint8Array(4 + encSession.byteLength + WebCryptAsym.IV_LENGTH);
+        const header = new Uint8Array(4 + encSession.byteLength + _WebCryptAsym.IV_LENGTH);
         new DataView(header.buffer).setUint32(0, encSession.byteLength, true);
         header.set(encSession, 4);
         header.set(iv, 4 + encSession.byteLength);
-
         const frameData = new Uint8Array(frame.data);
         const combined = new Uint8Array(header.byteLength + frameData.byteLength);
         combined.set(header);
         combined.set(frameData, header.byteLength);
-
         frame.data = combined;
         first = false;
       } else {
-        // Subsequent frames use standard AES-GCM
         const ciphertext = await this._crypto.subtle.encrypt(
-          { name: WebCryptAsym.AES_ALGORITHM, iv },
+          { name: _WebCryptAsym.AES_ALGORITHM, iv },
           sessionKey,
           frame.data
         );
-
         const frameData = new Uint8Array(frame.data);
         const combined = new Uint8Array(iv.byteLength + ciphertext.byteLength);
         combined.set(iv);
         combined.set(new Uint8Array(ciphertext), iv.byteLength);
-
         frame.data = combined;
       }
       controller.enqueue(frame);
     };
   }
-
   /**
    * Enhanced WebRTC transform with progress tracking
    * @param {CryptoKey} publicKey - RSA public key for hybrid encryption
@@ -1028,63 +973,51 @@ export class WebCryptAsym {
    */
   async createEncryptTransformWithProgress(publicKey, onProgress) {
     const sessionKey = await this._crypto.subtle.generateKey(
-      { name: WebCryptAsym.AES_ALGORITHM, length: WebCryptAsym.AES_LENGTH },
+      { name: _WebCryptAsym.AES_ALGORITHM, length: _WebCryptAsym.AES_LENGTH },
       true,
       ["encrypt"]
     );
     const exportedSession = await this._crypto.subtle.exportKey("raw", sessionKey);
-
     const encryptedSessionKey = await this._crypto.subtle.encrypt(
-      WebCryptAsym.RSA_ALGORITHM,
+      _WebCryptAsym.RSA_ALGORITHM,
       publicKey,
       exportedSession
     );
-
     let first = true;
     let totalBytes = 0;
-
     return async (frame, controller) => {
-      const iv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
-
+      const iv = this._crypto.getRandomValues(new Uint8Array(_WebCryptAsym.IV_LENGTH));
       if (first) {
-        // First frame carries encrypted session key + IV + payload
         const encSession = new Uint8Array(encryptedSessionKey);
-        const header = new Uint8Array(4 + encSession.byteLength + WebCryptAsym.IV_LENGTH);
+        const header = new Uint8Array(4 + encSession.byteLength + _WebCryptAsym.IV_LENGTH);
         new DataView(header.buffer).setUint32(0, encSession.byteLength, true);
         header.set(encSession, 4);
         header.set(iv, 4 + encSession.byteLength);
-
         const frameData = new Uint8Array(frame.data);
         const combined = new Uint8Array(header.byteLength + frameData.byteLength);
         combined.set(header);
         combined.set(frameData, header.byteLength);
-
         frame.data = combined;
         first = false;
       } else {
-        // Subsequent frames use standard AES-GCM
         const ciphertext = await this._crypto.subtle.encrypt(
-          { name: WebCryptAsym.AES_ALGORITHM, iv },
+          { name: _WebCryptAsym.AES_ALGORITHM, iv },
           sessionKey,
           frame.data
         );
-
         totalBytes += frame.data.byteLength;
         if (onProgress) {
           onProgress(totalBytes);
         }
-
         const frameData = new Uint8Array(frame.data);
         const combined = new Uint8Array(iv.byteLength + ciphertext.byteLength);
         combined.set(iv);
         combined.set(new Uint8Array(ciphertext), iv.byteLength);
-
         frame.data = combined;
       }
       controller.enqueue(frame);
     };
   }
-
   /**
    * Encrypt a file with progress tracking
    * @param {File|Blob} fileOrBlob - File or Blob to encrypt
@@ -1094,61 +1027,48 @@ export class WebCryptAsym {
    */
   async encryptFileWithProgress(fileOrBlob, publicKey, onProgress) {
     const aesKey = await this._crypto.subtle.generateKey(
-      { name: WebCryptAsym.AES_ALGORITHM, length: WebCryptAsym.AES_LENGTH },
+      { name: _WebCryptAsym.AES_ALGORITHM, length: _WebCryptAsym.AES_LENGTH },
       true,
       ["encrypt"]
     );
-
     const exportedAesKey = await this._crypto.subtle.exportKey("raw", aesKey);
-    const baseIv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
-
+    const baseIv = this._crypto.getRandomValues(new Uint8Array(_WebCryptAsym.IV_LENGTH));
     const encryptedAesKey = await this._crypto.subtle.encrypt(
-      WebCryptAsym.RSA_ALGORITHM,
+      _WebCryptAsym.RSA_ALGORITHM,
       publicKey,
       exportedAesKey
     );
-
-    // Header format: [4-byte length][encrypted AES key][base IV]
     const encKeyBytes = new Uint8Array(encryptedAesKey);
-    const header = new Uint8Array(4 + encKeyBytes.byteLength + WebCryptAsym.IV_LENGTH);
+    const header = new Uint8Array(4 + encKeyBytes.byteLength + _WebCryptAsym.IV_LENGTH);
     new DataView(header.buffer).setUint32(0, encKeyBytes.byteLength, true);
     header.set(encKeyBytes, 4);
     header.set(baseIv, 4 + encKeyBytes.byteLength);
-
     const chunks = [header];
     const reader = fileOrBlob.stream().getReader();
     let counter = 0;
     let totalBytes = 0;
-
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
-      const iv = new Uint8Array(WebCryptAsym.IV_LENGTH);
+      const iv = new Uint8Array(_WebCryptAsym.IV_LENGTH);
       iv.set(baseIv);
-      // Deterministic counter in last 4 bytes ensures unique IV per chunk
-      new DataView(iv.buffer).setUint32(WebCryptAsym.IV_LENGTH - 4, counter++, true);
-
+      new DataView(iv.buffer).setUint32(_WebCryptAsym.IV_LENGTH - 4, counter++, true);
       const encrypted = await this._crypto.subtle.encrypt(
-        { name: WebCryptAsym.AES_ALGORITHM, iv },
+        { name: _WebCryptAsym.AES_ALGORITHM, iv },
         aesKey,
         value
       );
-
       totalBytes += value.byteLength;
       if (onProgress) {
         onProgress(totalBytes);
       }
-
       chunks.push(encrypted);
     }
-
     const filename = (fileOrBlob.name || "encrypted") + ".asym-encrypted";
     const newBlob = new Blob(chunks);
     newBlob.name = filename;
     return { blob: newBlob, filename };
   }
-
   /**
    * Decrypt a file with progress tracking
    * @param {File|Blob} fileOrBlob - File or Blob to decrypt
@@ -1157,76 +1077,60 @@ export class WebCryptAsym {
    * @returns {Promise<{blob: Blob, filename: string}>} Decrypted file and metadata
    */
   async decryptFileWithProgress(fileOrBlob, privateKey, onProgress) {
-    // DoS protection: Check file size before loading into memory
-    const fileSize = fileOrBlob.size || (fileOrBlob.blob && fileOrBlob.blob.size);
-    if (fileSize && fileSize > WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
+    const fileSize = fileOrBlob.size || fileOrBlob.blob && fileOrBlob.blob.size;
+    if (fileSize && fileSize > _WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
       throw new Error("File too large for decryption");
     }
-
     const data = new Uint8Array(await fileOrBlob.arrayBuffer());
-
-    // DoS protection: Check size after loading
-    if (data.length > WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
+    if (data.length > _WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
       throw new Error("File too large for decryption");
     }
-    if (data.length < 4 + 100 + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
-
+    if (data.length < 4 + 100 + _WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
     const encKeyLen = new DataView(data.buffer).getUint32(0, true);
-    if (data.length < 4 + encKeyLen + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
-
+    if (data.length < 4 + encKeyLen + _WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
     const encryptedAesKey = data.slice(4, 4 + encKeyLen);
-    const baseIv = data.slice(4 + encKeyLen, 4 + encKeyLen + WebCryptAsym.IV_LENGTH);
-    const ciphertext = data.slice(4 + encKeyLen + WebCryptAsym.IV_LENGTH);
-
+    const baseIv = data.slice(4 + encKeyLen, 4 + encKeyLen + _WebCryptAsym.IV_LENGTH);
+    const ciphertext = data.slice(4 + encKeyLen + _WebCryptAsym.IV_LENGTH);
     const aesKeyRaw = await this._crypto.subtle.decrypt(
-      WebCryptAsym.RSA_ALGORITHM,
+      _WebCryptAsym.RSA_ALGORITHM,
       privateKey,
       encryptedAesKey
     );
-
     const aesKey = await this._crypto.subtle.importKey(
       "raw",
       aesKeyRaw,
-      { name: WebCryptAsym.AES_ALGORITHM },
+      { name: _WebCryptAsym.AES_ALGORITHM },
       false,
       ["decrypt"]
     );
-
     const chunks = [];
     let offset = 0;
     let counter = 0;
     let totalBytes = 0;
-
     while (offset < ciphertext.byteLength) {
-      const size = Math.min(WebCryptAsym.CHUNK_SIZE, ciphertext.byteLength - offset);
+      const size = Math.min(_WebCryptAsym.CHUNK_SIZE, ciphertext.byteLength - offset);
       const chunk = ciphertext.slice(offset, offset + size);
-
-      const iv = new Uint8Array(WebCryptAsym.IV_LENGTH);
+      const iv = new Uint8Array(_WebCryptAsym.IV_LENGTH);
       iv.set(baseIv);
-      new DataView(iv.buffer).setUint32(WebCryptAsym.IV_LENGTH - 4, counter++, true);
-
+      new DataView(iv.buffer).setUint32(_WebCryptAsym.IV_LENGTH - 4, counter++, true);
       const decrypted = await this._crypto.subtle.decrypt(
-        { name: WebCryptAsym.AES_ALGORITHM, iv },
+        { name: _WebCryptAsym.AES_ALGORITHM, iv },
         aesKey,
         chunk
       );
-
       totalBytes += size;
       if (onProgress) {
         onProgress(totalBytes);
       }
-
       chunks.push(decrypted);
       offset += size;
     }
-
     const filename = (fileOrBlob.name || fileOrBlob.filename || "decrypted").replace(
       /\.asym-encrypted$/i,
       ""
     );
     return { blob: new Blob(chunks), filename };
   }
-
   /**
    * Generate a key from multiple inputs (e.g., password + salt + nonce)
    * @param {Array<string>} inputs - Array of input strings to combine
@@ -1235,16 +1139,13 @@ export class WebCryptAsym {
    * @returns {Promise<CryptoKey>} Generated symmetric key
    */
   async generateKeyFromMultipleInputs(inputs, salt, algorithm = "PBKDF2") {
-    // Combine all inputs into a single string
     const combinedInput = inputs.join("|");
-
     if (algorithm === "Argon2") {
       return await this.deriveKeyArgon2(combinedInput, salt);
     } else {
       return await this.deriveKeyPBKDF2(combinedInput, salt);
     }
   }
-
   /**
    * Sign a message with multiple signature algorithms
    * @param {string} text - Text to sign
@@ -1254,27 +1155,23 @@ export class WebCryptAsym {
    */
   async signTextWithAlgorithm(text, privateKey, algorithm = "ECDSA") {
     const data = new TextEncoder().encode(text);
-
     if (algorithm === "EdDSA") {
-      // For EdDSA, we would need to import the key as Ed25519
       throw new Error("EdDSA signing not yet implemented in this version");
     } else if (algorithm === "RSA-PSS") {
-      // For RSA-PSS, we'd use the RSA-PSS algorithm
       const signature = await this._crypto.subtle.sign(
         {
-          name: WebCryptAsym.RSA_PSS_ALGORITHM,
-          saltLength: 32,
+          name: _WebCryptAsym.RSA_PSS_ALGORITHM,
+          saltLength: 32
         },
         privateKey,
         data
       );
       return this._arrayBufferToBase64(signature);
     } else {
-      // Default to ECDSA
       const signature = await this._crypto.subtle.sign(
         {
-          name: WebCryptAsym.SIGN_ALGORITHM,
-          hash: { name: WebCryptAsym.SIGN_HASH },
+          name: _WebCryptAsym.SIGN_ALGORITHM,
+          hash: { name: _WebCryptAsym.SIGN_HASH }
         },
         privateKey,
         data
@@ -1282,7 +1179,6 @@ export class WebCryptAsym {
       return this._arrayBufferToBase64(signature);
     }
   }
-
   /**
    * Verify a signature with multiple signature algorithms
    * @param {string} text - Text that was signed
@@ -1294,27 +1190,23 @@ export class WebCryptAsym {
   async verifyTextWithAlgorithm(text, signatureB64, publicKey, algorithm = "ECDSA") {
     const data = new TextEncoder().encode(text);
     const signature = this._base64ToArrayBuffer(signatureB64);
-
     if (algorithm === "EdDSA") {
-      // For EdDSA, we would need to import the key as Ed25519
       throw new Error("EdDSA verification not yet implemented in this version");
     } else if (algorithm === "RSA-PSS") {
-      // For RSA-PSS, we'd use the RSA-PSS algorithm
       return await this._crypto.subtle.verify(
         {
-          name: WebCryptAsym.RSA_PSS_ALGORITHM,
-          saltLength: 32,
+          name: _WebCryptAsym.RSA_PSS_ALGORITHM,
+          saltLength: 32
         },
         publicKey,
         signature,
         data
       );
     } else {
-      // Default to ECDSA
       return await this._crypto.subtle.verify(
         {
-          name: WebCryptAsym.SIGN_ALGORITHM,
-          hash: { name: WebCryptAsym.SIGN_HASH },
+          name: _WebCryptAsym.SIGN_ALGORITHM,
+          hash: { name: _WebCryptAsym.SIGN_HASH }
         },
         publicKey,
         signature,
@@ -1322,17 +1214,14 @@ export class WebCryptAsym {
       );
     }
   }
-
   /**
    * Secure random number generation with better entropy sources
    * @param {number} length - Number of bytes to generate
    * @returns {Promise<Uint8Array>} Random bytes
    */
   async secureRandom(length) {
-    // Use the Web Crypto API's getRandomValues if available, otherwise fall back to a secure method
     return this._crypto.getRandomValues(new Uint8Array(length));
   }
-
   /**
    * Implement timing-safe comparison to prevent timing attacks
    * @param {Uint8Array} a - First array to compare
@@ -1343,29 +1232,23 @@ export class WebCryptAsym {
     if (a.byteLength !== b.byteLength) {
       return false;
     }
-
     let result = 0;
     for (let i = 0; i < a.byteLength; i++) {
       result |= a[i] ^ b[i];
     }
-
     return result === 0;
   }
-
   /**
    * Enhanced error handling to prevent timing attacks
    * @param {string} message - Error message
    * @throws {Error} The error with consistent response time
    */
   _throwTimingSafeError(message) {
-    // Use a timing-safe approach to avoid leaking information through timing
     const dummy = new Uint8Array(100);
     this._crypto.getRandomValues(dummy);
     throw new Error(message);
   }
-
   // ════════════════════════════ Post-Quantum Features ════════════════════════════
-
   /**
    * Enhanced Argon2id key derivation (stronger against GPU/ASIC attacks than PBKDF2).
    * Provides quantum-resistant key stretching with tuned parameters for 2025+.
@@ -1381,12 +1264,12 @@ export class WebCryptAsym {
    */
   async deriveKeyArgon2Enhanced(password, salt, options = {}) {
     const {
-      memory = 65536, // 64 MB
+      memory = 65536,
+      // 64 MB
       iterations = 3,
       parallelism = 1,
-      keyLength = 256,
+      keyLength = 256
     } = options;
-
     const encoder = new TextEncoder();
     const keyMaterial = await this._crypto.subtle.importKey(
       "raw",
@@ -1395,29 +1278,25 @@ export class WebCryptAsym {
       false,
       ["deriveBits", "deriveKey"]
     );
-
     try {
-      // Try to use native Argon2 if available (Node.js 20+, some browsers)
       return await this._crypto.subtle.deriveKey(
         {
           name: "Argon2",
-          salt: salt,
-          iterations: iterations,
+          salt,
+          iterations,
           memoryCost: memory,
-          parallelism: parallelism,
+          parallelism
         },
         keyMaterial,
-        { name: WebCryptAsym.AES_ALGORITHM, length: keyLength },
+        { name: _WebCryptAsym.AES_ALGORITHM, length: keyLength },
         false,
         ["encrypt", "decrypt"]
       );
     } catch (e) {
-      // Fallback: Use PBKDF2 with much higher iteration count
       console.warn("Argon2 not available; using PBKDF2 with 1M iterations as fallback");
-      return await this.deriveKeyPBKDF2(password, salt, 1000000, "SHA-256", keyLength);
+      return await this.deriveKeyPBKDF2(password, salt, 1e6, "SHA-256", keyLength);
     }
   }
-
   /**
    * SHA-3 based key derivation function (quantum-resistant, collision-resistant).
    * Uses iterative SHA-3 hashing as an alternative to PBKDF2/Argon2.
@@ -1428,45 +1307,34 @@ export class WebCryptAsym {
    * @param {string} [algorithm='SHA3-256'] - Hash algorithm: 'SHA3-256', 'SHA3-384', 'SHA3-512'
    * @returns {Promise<CryptoKey>} Derived AES-256 key for encrypt/decrypt
    */
-  async deriveKeySHA3(password, iterations = 100000, algorithm = "SHA3-256") {
+  async deriveKeySHA3(password, iterations = 1e5, algorithm = "SHA3-256") {
     const encoder = new TextEncoder();
     const passwordBytes = encoder.encode(password);
-
-    // Generate deterministic salt from password (same password → same salt)
     const saltHash = await this._crypto.subtle.digest("SHA-256", passwordBytes);
     const salt = new Uint8Array(saltHash).slice(0, 16);
-
     let material = new Uint8Array(passwordBytes.byteLength + salt.byteLength);
     material.set(passwordBytes);
     material.set(salt, passwordBytes.byteLength);
-
-    // Iterative SHA-3 KDF
     for (let i = 0; i < iterations; i++) {
       const hashInput = new Uint8Array(material.byteLength + 4);
       hashInput.set(material);
       new DataView(hashInput.buffer).setUint32(material.byteLength, i, true);
-
       try {
         material = new Uint8Array(await this._crypto.subtle.digest(algorithm, hashInput));
       } catch (e) {
-        // SHA-3 not available; fall back to SHA-256
         console.warn("SHA-3 not available; falling back to SHA-256");
         material = new Uint8Array(await this._crypto.subtle.digest("SHA-256", hashInput));
       }
     }
-
-    // Take first 32 bytes as the derived key
     const derivedKey = material.slice(0, 32);
-
     return await this._crypto.subtle.importKey(
       "raw",
       derivedKey,
-      { name: WebCryptAsym.AES_ALGORITHM, length: 256 },
+      { name: _WebCryptAsym.AES_ALGORITHM, length: 256 },
       false,
       ["encrypt", "decrypt"]
     );
   }
-
   /**
    * HKDF (HMAC-based Extract-and-Expand KDF) with SHA-3 for quantum-resistant expansion.
    * Suitable for deriving multiple independent keys from a single master secret.
@@ -1479,10 +1347,8 @@ export class WebCryptAsym {
    */
   async deriveKeyHKDFSHA3(secret, salt, info = new Uint8Array(0), keyLength = 256) {
     if (!salt || salt.byteLength === 0) {
-      salt = new Uint8Array(32); // All zeros
+      salt = new Uint8Array(32);
     }
-
-    // Step 1: HMAC-SHA3 Extract
     try {
       const hmacKey = await this._crypto.subtle.importKey(
         "raw",
@@ -1492,8 +1358,6 @@ export class WebCryptAsym {
         ["sign"]
       );
       const prk = await this._crypto.subtle.sign("HMAC", hmacKey, secret);
-
-      // Step 2: HMAC-SHA3 Expand
       const expandHmacKey = await this._crypto.subtle.importKey(
         "raw",
         new Uint8Array(prk),
@@ -1501,40 +1365,34 @@ export class WebCryptAsym {
         false,
         ["sign"]
       );
-
-      const hashLen = 32; // SHA3-256 output
+      const hashLen = 32;
       const n = Math.ceil(keyLength / 8 / hashLen);
       let okm = new Uint8Array(0);
       let t = new Uint8Array(0);
-
       for (let i = 1; i <= n; i++) {
         const hmacInput = new Uint8Array(t.byteLength + info.byteLength + 1);
         hmacInput.set(t);
         hmacInput.set(info, t.byteLength);
         hmacInput[t.byteLength + info.byteLength] = i;
-
         t = new Uint8Array(await this._crypto.subtle.sign("HMAC", expandHmacKey, hmacInput));
         const newOkm = new Uint8Array(okm.byteLength + t.byteLength);
         newOkm.set(okm);
         newOkm.set(t, okm.byteLength);
         okm = newOkm;
       }
-
       const finalKey = okm.slice(0, keyLength / 8);
       return await this._crypto.subtle.importKey(
         "raw",
         finalKey,
-        { name: WebCryptAsym.AES_ALGORITHM, length: keyLength },
+        { name: _WebCryptAsym.AES_ALGORITHM, length: keyLength },
         false,
         ["encrypt", "decrypt"]
       );
     } catch (e) {
-      // Fall back to SHA-256 based HKDF
       console.warn("HKDF-SHA3 failed; falling back to HKDF-SHA256");
       return await this.deriveKeyHKDFSHA2(secret, salt, info, keyLength);
     }
   }
-
   /**
    * HKDF with SHA-256 (fallback variant).
    */
@@ -1542,7 +1400,6 @@ export class WebCryptAsym {
     if (!salt || salt.byteLength === 0) {
       salt = new Uint8Array(32);
     }
-
     const hmacKey = await this._crypto.subtle.importKey(
       "raw",
       salt,
@@ -1551,7 +1408,6 @@ export class WebCryptAsym {
       ["sign"]
     );
     const prk = await this._crypto.subtle.sign("HMAC", hmacKey, secret);
-
     const expandHmacKey = await this._crypto.subtle.importKey(
       "raw",
       new Uint8Array(prk),
@@ -1559,35 +1415,30 @@ export class WebCryptAsym {
       false,
       ["sign"]
     );
-
     const hashLen = 32;
     const n = Math.ceil(keyLength / 8 / hashLen);
     let okm = new Uint8Array(0);
     let t = new Uint8Array(0);
-
     for (let i = 1; i <= n; i++) {
       const hmacInput = new Uint8Array(t.byteLength + info.byteLength + 1);
       hmacInput.set(t);
       hmacInput.set(info, t.byteLength);
       hmacInput[t.byteLength + info.byteLength] = i;
-
       t = new Uint8Array(await this._crypto.subtle.sign("HMAC", expandHmacKey, hmacInput));
       const newOkm = new Uint8Array(okm.byteLength + t.byteLength);
       newOkm.set(okm);
       newOkm.set(t, okm.byteLength);
       okm = newOkm;
     }
-
     const finalKey = okm.slice(0, keyLength / 8);
     return await this._crypto.subtle.importKey(
       "raw",
       finalKey,
-      { name: WebCryptAsym.AES_ALGORITHM, length: keyLength },
+      { name: _WebCryptAsym.AES_ALGORITHM, length: keyLength },
       false,
       ["encrypt", "decrypt"]
     );
   }
-
   /**
    * Key rotation: Re-derive key with new salt (for key management & security policies).
    * Useful for periodic key rotation without re-encryption.
@@ -1611,7 +1462,6 @@ export class WebCryptAsym {
         return await this.deriveKeyPBKDF2(password, newSalt);
     }
   }
-
   /**
    * Derive hierarchical child key from parent key (for key structures).
    * Enables creating distinct keys for different purposes from a single master key.
@@ -1622,38 +1472,31 @@ export class WebCryptAsym {
    * @returns {Promise<CryptoKey>} Child derived key
    */
   async deriveChildKeyHierarchical(parentKey, childSalt, purpose = "encryption") {
-    // Extract parent key material
     const parentKeyRaw = await this._crypto.subtle.exportKey("raw", parentKey);
-
-    // Combine with purpose and salt
     const input = new Uint8Array(parentKeyRaw.byteLength + childSalt.byteLength + purpose.length);
     input.set(new Uint8Array(parentKeyRaw));
     input.set(childSalt, parentKeyRaw.byteLength);
     input.set(new TextEncoder().encode(purpose), parentKeyRaw.byteLength + childSalt.byteLength);
-
-    // Derive via SHA-3 hash
     try {
       const childKeyMaterial = await this._crypto.subtle.digest("SHA3-256", input);
       return await this._crypto.subtle.importKey(
         "raw",
         childKeyMaterial,
-        { name: WebCryptAsym.AES_ALGORITHM, length: 256 },
+        { name: _WebCryptAsym.AES_ALGORITHM, length: 256 },
         false,
         ["encrypt", "decrypt"]
       );
     } catch (e) {
-      // Fall back to SHA-256
       const childKeyMaterial = await this._crypto.subtle.digest("SHA-256", input);
       return await this._crypto.subtle.importKey(
         "raw",
         childKeyMaterial,
-        { name: WebCryptAsym.AES_ALGORITHM, length: 256 },
+        { name: _WebCryptAsym.AES_ALGORITHM, length: 256 },
         false,
         ["encrypt", "decrypt"]
       );
     }
   }
-
   /**
    * Secure key erasure: Overwrite key material in memory.
    * Note: This is best-effort; true secure erasure depends on runtime guarantees.
@@ -1667,9 +1510,7 @@ export class WebCryptAsym {
       }
     }
   }
-
   // ────────────────────── ECDH Key Exchange ──────────────────────
-
   /**
    * Generate an ECDH key pair for key exchange.
    * @param {string} curve - Elliptic curve to use (default: 'P-256')
@@ -1684,7 +1525,6 @@ export class WebCryptAsym {
     const publicKeyB64 = await this.exportECDHPublicKey(keyPair.publicKey);
     return { publicKey: keyPair.publicKey, privateKey: keyPair.privateKey, publicKeyB64 };
   }
-
   /**
    * Export an ECDH public key to base64 for sharing.
    * @param {CryptoKey} publicKey
@@ -1694,7 +1534,6 @@ export class WebCryptAsym {
     const exported = await this._crypto.subtle.exportKey("spki", publicKey);
     return this._arrayBufferToBase64(exported);
   }
-
   /**
    * Import an ECDH public key from base64.
    * @param {string} b64 - Base64 string of the public key
@@ -1708,10 +1547,10 @@ export class WebCryptAsym {
       binary,
       { name: "ECDH", namedCurve: curve },
       true,
-      [] // ECDH public keys don't have operations themselves, they are used as parameters
+      []
+      // ECDH public keys don't have operations themselves, they are used as parameters
     );
   }
-
   /**
    * Derive a shared secret using ECDH.
    * @param {CryptoKey} privateKey - Your private key
@@ -1722,12 +1561,11 @@ export class WebCryptAsym {
     return await this._crypto.subtle.deriveKey(
       { name: "ECDH", public: publicKey },
       privateKey,
-      { name: WebCryptAsym.AES_ALGORITHM, length: WebCryptAsym.AES_LENGTH },
+      { name: _WebCryptAsym.AES_ALGORITHM, length: _WebCryptAsym.AES_LENGTH },
       false,
       ["encrypt", "decrypt"]
     );
   }
-
   /**
    * Encrypt data automatically deriving an ECDH shared secret.
    * This is a convenient all-in-one E2EE method for sender and recipient pairs.
@@ -1741,20 +1579,17 @@ export class WebCryptAsym {
     const text = typeof data === "string" ? data : JSON.stringify(data);
     const encoder = new TextEncoder();
     const encoded = encoder.encode(text);
-    const iv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
-
+    const iv = this._crypto.getRandomValues(new Uint8Array(_WebCryptAsym.IV_LENGTH));
     const encrypted = await this._crypto.subtle.encrypt(
-      { name: WebCryptAsym.AES_ALGORITHM, iv },
+      { name: _WebCryptAsym.AES_ALGORITHM, iv },
       sharedKey,
       encoded
     );
-
-    const result = new Uint8Array(WebCryptAsym.IV_LENGTH + encrypted.byteLength);
+    const result = new Uint8Array(_WebCryptAsym.IV_LENGTH + encrypted.byteLength);
     result.set(iv, 0);
-    result.set(new Uint8Array(encrypted), WebCryptAsym.IV_LENGTH);
+    result.set(new Uint8Array(encrypted), _WebCryptAsym.IV_LENGTH);
     return this._arrayBufferToBase64(result.buffer);
   }
-
   /**
    * Decrypt data automatically deriving an ECDH shared secret.
    * @param {string} b64 - Base64-encoded encrypted payload
@@ -1765,20 +1600,16 @@ export class WebCryptAsym {
   async decryptWithECDH(b64, privateKey, senderPublicKey) {
     const sharedKey = await this.deriveECDHSharedSecret(privateKey, senderPublicKey);
     const combined = new Uint8Array(this._base64ToArrayBuffer(b64));
-
-    if (combined.byteLength < WebCryptAsym.IV_LENGTH) {
+    if (combined.byteLength < _WebCryptAsym.IV_LENGTH) {
       throw new Error("Invalid encrypted data");
     }
-
-    const iv = combined.slice(0, WebCryptAsym.IV_LENGTH);
-    const ciphertext = combined.slice(WebCryptAsym.IV_LENGTH);
-
+    const iv = combined.slice(0, _WebCryptAsym.IV_LENGTH);
+    const ciphertext = combined.slice(_WebCryptAsym.IV_LENGTH);
     const decrypted = await this._crypto.subtle.decrypt(
-      { name: WebCryptAsym.AES_ALGORITHM, iv },
+      { name: _WebCryptAsym.AES_ALGORITHM, iv },
       sharedKey,
       ciphertext
     );
-
     const text = new TextDecoder().decode(decrypted);
     try {
       return JSON.parse(text);
@@ -1786,9 +1617,7 @@ export class WebCryptAsym {
       return text;
     }
   }
-
   // ────────────────────── Human-Friendly Data Operations ──────────────────────
-
   /**
    * Automatically serializes any JavaScript object or array to JSON before encrypting.
    * @param {any} data - Any serializable JavaScript data
@@ -1799,7 +1628,6 @@ export class WebCryptAsym {
     const text = JSON.stringify(data);
     return await this.encryptText(text, publicKey);
   }
-
   /**
    * Decrypts the data and automatically parses it back into a JavaScript object.
    * @param {string} b64 - Base64-encoded encrypted string
@@ -1810,9 +1638,7 @@ export class WebCryptAsym {
     const text = await this.decryptText(b64, privateKey);
     return JSON.parse(text);
   }
-
   // ────────────────────── JSON Web Encryption (JWE) ──────────────────────
-
   /**
    * Helper to convert an ArrayBuffer to Base64URL string
    */
@@ -1820,7 +1646,6 @@ export class WebCryptAsym {
     const b64 = this._arrayBufferToBase64(buffer);
     return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   }
-
   /**
    * Helper to convert a Base64URL string to ArrayBuffer
    */
@@ -1831,7 +1656,6 @@ export class WebCryptAsym {
     }
     return this._base64ToArrayBuffer(b64);
   }
-
   /**
    * Encrypts payload into a JWE Compact Serialization string.
    * Uses RSA-OAEP-256 for key management and A256GCM for content encryption.
@@ -1845,45 +1669,33 @@ export class WebCryptAsym {
     const encoder = new TextEncoder();
     const textPayload = typeof payload === "string" ? payload : JSON.stringify(payload);
     const plaintext = encoder.encode(textPayload);
-
-    // 1. Determine Protected Headers
     const protectedHeaders = {
       alg: "RSA-OAEP",
       enc: "A256GCM",
-      ...customHeaders,
+      ...customHeaders
     };
     const headerStr = JSON.stringify(protectedHeaders);
     const encodedHeader = this._arrayBufferToBase64Url(encoder.encode(headerStr).buffer);
-
-    // 2. Generate Content Encryption Key (CEK)
     const cek = await this._crypto.subtle.generateKey(
-      { name: WebCryptAsym.AES_ALGORITHM, length: WebCryptAsym.AES_LENGTH },
+      { name: _WebCryptAsym.AES_ALGORITHM, length: _WebCryptAsym.AES_LENGTH },
       true,
       ["encrypt", "decrypt"]
     );
     const exportedCek = await this._crypto.subtle.exportKey("raw", cek);
-
-    // 3. Encrypt CEK using recipient's public key (RSA-OAEP)
     const encryptedCek = await this._crypto.subtle.encrypt(
-      WebCryptAsym.RSA_ALGORITHM,
+      _WebCryptAsym.RSA_ALGORITHM,
       publicKey,
       exportedCek
     );
     const encodedEncryptedCek = this._arrayBufferToBase64Url(encryptedCek);
-
-    // 4. Generate Initialization Vector (IV)
-    const iv = this._crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV for GCM
+    const iv = this._crypto.getRandomValues(new Uint8Array(12));
     const encodedIv = this._arrayBufferToBase64Url(iv.buffer);
-
-    // 5. Encrypt Content (AES-GCM) with Additional Authenticated Data (AAD)
     const aad = encoder.encode(encodedHeader);
     const ciphertextBuffer = await this._crypto.subtle.encrypt(
-      { name: WebCryptAsym.AES_ALGORITHM, iv, additionalData: aad },
+      { name: _WebCryptAsym.AES_ALGORITHM, iv, additionalData: aad },
       cek,
       plaintext
     );
-
-    // AES-GCM output is ciphertext + tag (last 16 bytes)
     const combinedCiphertextAndTag = new Uint8Array(ciphertextBuffer);
     const tagLength = 16;
     const ciphertext = combinedCiphertextAndTag.slice(
@@ -1891,14 +1703,10 @@ export class WebCryptAsym {
       combinedCiphertextAndTag.byteLength - tagLength
     );
     const authTag = combinedCiphertextAndTag.slice(combinedCiphertextAndTag.byteLength - tagLength);
-
     const encodedCiphertext = this._arrayBufferToBase64Url(ciphertext.buffer);
     const encodedAuthTag = this._arrayBufferToBase64Url(authTag.buffer);
-
-    // Assemble JWE Compact Serialization
     return `${encodedHeader}.${encodedEncryptedCek}.${encodedIv}.${encodedCiphertext}.${encodedAuthTag}`;
   }
-
   /**
    * Decrypts a JWE Compact Serialization string.
    *
@@ -1908,100 +1716,73 @@ export class WebCryptAsym {
    */
   async decryptJWE(jweToken, privateKey) {
     if (typeof jweToken !== "string") throw new Error("Invalid JWE token format");
-
     const parts = jweToken.split(".");
     if (parts.length !== 5) {
       throw new Error("Invalid JWE token structure (expected 5 parts)");
     }
-
-    const [encodedHeader, encodedEncryptedCek, encodedIv, encodedCiphertext, encodedAuthTag] =
-      parts;
-
-    // 1. Decode and Validate Headers
+    const [encodedHeader, encodedEncryptedCek, encodedIv, encodedCiphertext, encodedAuthTag] = parts;
     const decoder = new TextDecoder();
     let header;
     try {
       const headerBuffer = this._base64UrlToArrayBuffer(encodedHeader);
       header = JSON.parse(decoder.decode(headerBuffer));
     } catch (e) {
-      const msg =
-        typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production"
-          ? `Failed to parse JWE header: ${e.message}`
-          : "Failed to decrypt JWE";
+      const msg = typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production" ? `Failed to parse JWE header: ${e.message}` : "Failed to decrypt JWE";
       throw new Error(msg);
     }
-
     if (header.alg !== "RSA-OAEP") {
-      const msg =
-        typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production"
-          ? `Unsupported JWE algorithm: ${header.alg}`
-          : "Failed to decrypt JWE";
+      const msg = typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production" ? `Unsupported JWE algorithm: ${header.alg}` : "Failed to decrypt JWE";
       throw new Error(msg);
     }
     if (header.enc !== "A256GCM") {
       throw new Error(`Unsupported JWE encryption: ${header.enc}`);
     }
-
-    // 2. Decrypt CEK
     let cekRaw;
     try {
       const encryptedCekBuffer = this._base64UrlToArrayBuffer(encodedEncryptedCek);
       cekRaw = await this._crypto.subtle.decrypt(
-        WebCryptAsym.RSA_ALGORITHM,
+        _WebCryptAsym.RSA_ALGORITHM,
         privateKey,
         encryptedCekBuffer
       );
     } catch (e) {
-      const msg =
-        typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production"
-          ? `Failed to decrypt Content Encryption Key (CEK): ${e.message}`
-          : "Failed to decrypt JWE";
+      const msg = typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production" ? `Failed to decrypt Content Encryption Key (CEK): ${e.message}` : "Failed to decrypt JWE";
       throw new Error(msg);
     }
-
     const cek = await this._crypto.subtle.importKey(
       "raw",
       cekRaw,
-      { name: WebCryptAsym.AES_ALGORITHM },
+      { name: _WebCryptAsym.AES_ALGORITHM },
       false,
       ["decrypt"]
     );
-
-    // 3. Prepare IV, Ciphertext, Tag, and AAD
     const iv = new Uint8Array(this._base64UrlToArrayBuffer(encodedIv));
     const ciphertext = new Uint8Array(this._base64UrlToArrayBuffer(encodedCiphertext));
     const authTag = new Uint8Array(this._base64UrlToArrayBuffer(encodedAuthTag));
-
     const combinedCiphertextAndTag = new Uint8Array(ciphertext.byteLength + authTag.byteLength);
     combinedCiphertextAndTag.set(ciphertext);
     combinedCiphertextAndTag.set(authTag, ciphertext.byteLength);
-
     const encoder = new TextEncoder();
     const aad = encoder.encode(encodedHeader);
-
-    // 4. Decrypt Content
     let decryptedBuffer;
     try {
       decryptedBuffer = await this._crypto.subtle.decrypt(
-        { name: WebCryptAsym.AES_ALGORITHM, iv, additionalData: aad },
+        { name: _WebCryptAsym.AES_ALGORITHM, iv, additionalData: aad },
         cek,
         combinedCiphertextAndTag
       );
     } catch (e) {
-      const msg =
-        typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production"
-          ? "Failed to decrypt JWE payload (authentication tag mismatch or invalid data)"
-          : "Failed to decrypt JWE";
+      const msg = typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production" ? "Failed to decrypt JWE payload (authentication tag mismatch or invalid data)" : "Failed to decrypt JWE";
       throw new Error(msg);
     }
-
     const textPayload = decoder.decode(decryptedBuffer);
-
-    // Attempt to parse JSON
     try {
       return JSON.parse(textPayload);
     } catch (e) {
       return textPayload;
     }
   }
-}
+};
+export {
+  WebCryptAsym
+};

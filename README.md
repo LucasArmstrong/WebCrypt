@@ -75,6 +75,7 @@ const decrypted = await wca.decryptText(encrypted, keys.privateKey);
 | Key caching                 | ✅ Done | 5-min TTL, LRU eviction (max 10)                      |
 | TypeScript                  | ✅ Done | Full `.d.ts` for all modules                          |
 | Zero dependencies           | ✅ Done | Pure Web Crypto API                                   |
+| JWE (JSON Web Encryption)   | ✅ Done | RFC 7516 Compact Serialization (RSA-OAEP/A256GCM)     |
 | Post-quantum (Kyber/Dilith) | ⚠️ Stub | Placeholder — see [docs/PQC.md](./docs/PQC.md)        |
 
 ---
@@ -229,6 +230,26 @@ const fileValid = await crypt.verifyFile(file, signatureB64, publicKey);
 const { blob, filename } = await crypt.encryptFileWithProgress(file, publicKey, progress => {
   console.log(`${Math.round(progress * 100)}%`);
 });
+```
+
+### JSON Web Encryption (JWE)
+
+Create and decrypt standard JWE Compact Serialization tokens (RFC 7516) using RSA-OAEP-256 and A256GCM.
+
+```js
+import { WebCryptAsym } from "webcrypt";
+const crypt = new WebCryptAsym();
+
+// Generate or import key pair
+const keys = await crypt.generateKeyPair();
+
+// Encrypt payload into a JWE string
+const payload = { userId: 123, role: "admin" };
+const jweToken = await crypt.encryptJWE(payload, keys.publicKey, { kid: "my-key-id" });
+
+// Decrypt JWE token
+const decrypted = await crypt.decryptJWE(jweToken, keys.privateKey);
+// decrypted.role → "admin"
 ```
 
 ---
@@ -390,6 +411,10 @@ crypt.verifyFile(file: File | Blob, sig: string, publicKey: CryptoKey): Promise<
 // Additional signing algorithms
 crypt.signTextWithAlgorithm(text, privateKey, algorithm?: 'ECDSA' | 'RSA-PSS'): Promise<string>
 crypt.verifyTextWithAlgorithm(text, sig, publicKey, algorithm?): Promise<boolean>
+
+// JWE
+crypt.encryptJWE(payload: any, publicKey: CryptoKey, headers?: object): Promise<string>
+crypt.decryptJWE(jweToken: string, privateKey: CryptoKey): Promise<any>
 
 // MAC
 crypt.signHMAC(data: string, key: CryptoKey, hash?: string): Promise<string>
