@@ -1,6 +1,11 @@
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-}) : x)(function(x) {
+var __require = /* @__PURE__ */ (x =>
+  typeof require !== "undefined"
+    ? require
+    : typeof Proxy !== "undefined"
+      ? new Proxy(x, {
+          get: (a, b) => (typeof require !== "undefined" ? require : a)[b],
+        })
+      : x)(function (x) {
   if (typeof require !== "undefined") return require.apply(this, arguments);
   throw Error('Dynamic require of "' + x + '" is not supported');
 });
@@ -101,7 +106,7 @@ var WebCrypt = class _WebCrypt {
         name: "PBKDF2",
         salt,
         iterations: _WebCrypt.PBKDF2_ITERATIONS,
-        hash: _WebCrypt.HASH_ALGORITHM
+        hash: _WebCrypt.HASH_ALGORITHM,
       },
       keyMaterial,
       { name: _WebCrypt.ALGORITHM, length: _WebCrypt.KEY_LENGTH },
@@ -125,7 +130,7 @@ var WebCrypt = class _WebCrypt {
     this.keyCache.set(cacheKey, {
       key,
       createdAt: Date.now(),
-      lastAccessed: Date.now()
+      lastAccessed: Date.now(),
     });
     return key;
   }
@@ -164,7 +169,9 @@ var WebCrypt = class _WebCrypt {
     const iv = crypto.getRandomValues(new Uint8Array(_WebCrypt.IV_LENGTH));
     const key = await this._deriveKey(password, salt);
     const encrypted = await crypto.subtle.encrypt({ name: _WebCrypt.ALGORITHM, iv }, key, data);
-    const result = new Uint8Array(_WebCrypt.SALT_LENGTH + _WebCrypt.IV_LENGTH + encrypted.byteLength);
+    const result = new Uint8Array(
+      _WebCrypt.SALT_LENGTH + _WebCrypt.IV_LENGTH + encrypted.byteLength
+    );
     result.set(salt, 0);
     result.set(iv, _WebCrypt.SALT_LENGTH);
     result.set(new Uint8Array(encrypted), _WebCrypt.SALT_LENGTH + _WebCrypt.IV_LENGTH);
@@ -247,7 +254,7 @@ var WebCrypt = class _WebCrypt {
    * @throws {Error} If password is wrong, file is corrupted, or file exceeds 10 MB
    */
   async decryptFile(fileOrBlob, password) {
-    const fileSize = fileOrBlob.size || fileOrBlob.blob && fileOrBlob.blob.size;
+    const fileSize = fileOrBlob.size || (fileOrBlob.blob && fileOrBlob.blob.size);
     if (fileSize && fileSize > _WebCrypt.MAX_ENCRYPTED_DATA_SIZE) {
       throw new Error("File too large for decryption");
     }
@@ -263,7 +270,8 @@ var WebCrypt = class _WebCrypt {
     const ciphertext = data.slice(_WebCrypt.SALT_LENGTH + _WebCrypt.IV_LENGTH);
     const key = await this._deriveKey(password, salt);
     const chunks = [];
-    let offset = 0, counter = 0;
+    let offset = 0,
+      counter = 0;
     while (offset < ciphertext.byteLength) {
       const size = Math.min(_WebCrypt.CHUNK_SIZE, ciphertext.byteLength - offset);
       const chunk = ciphertext.slice(offset, offset + size);
@@ -340,7 +348,7 @@ var WebCrypt = class _WebCrypt {
         name: "PBKDF2",
         salt,
         iterations: 6e5,
-        hash: "SHA-256"
+        hash: "SHA-256",
       };
       const baseKey = await crypto.subtle.importKey(
         "raw",
@@ -382,7 +390,7 @@ var WebCrypt = class _WebCrypt {
    */
   async verifyHmac(data, hmac, key) {
     const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
-    const signatureBuffer = Uint8Array.from(atob(hmac), (c) => c.charCodeAt(0));
+    const signatureBuffer = Uint8Array.from(atob(hmac), c => c.charCodeAt(0));
     return crypto.subtle.verify("HMAC", key, signatureBuffer, dataBuffer);
   }
   // ════════════════════════════ Post-Quantum HMAC (SHA-3) ════════════════════════════
@@ -420,7 +428,7 @@ var WebCrypt = class _WebCrypt {
     }
     return crypto.subtle.importKey("raw", keyMaterial, { name: "HMAC", hash: hmacHash }, true, [
       "sign",
-      "verify"
+      "verify",
     ]);
   }
   /**
@@ -443,7 +451,7 @@ var WebCrypt = class _WebCrypt {
    */
   async verifyHmacSHA3(data, hmac, key) {
     const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
-    const signatureBuffer = Uint8Array.from(atob(hmac), (c) => c.charCodeAt(0));
+    const signatureBuffer = Uint8Array.from(atob(hmac), c => c.charCodeAt(0));
     return crypto.subtle.verify("HMAC", key, signatureBuffer, dataBuffer);
   }
   // ────────────────────── Human-Friendly Data Operations ──────────────────────
@@ -484,6 +492,4 @@ var WebCrypt = class _WebCrypt {
     return btoa(binary);
   }
 };
-export {
-  WebCrypt
-};
+export { WebCrypt };

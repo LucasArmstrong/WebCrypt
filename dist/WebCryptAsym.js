@@ -1,6 +1,11 @@
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-}) : x)(function(x) {
+var __require = /* @__PURE__ */ (x =>
+  typeof require !== "undefined"
+    ? require
+    : typeof Proxy !== "undefined"
+      ? new Proxy(x, {
+          get: (a, b) => (typeof require !== "undefined" ? require : a)[b],
+        })
+      : x)(function (x) {
   if (typeof require !== "undefined") return require.apply(this, arguments);
   throw Error('Dynamic require of "' + x + '" is not supported');
 });
@@ -57,7 +62,7 @@ var TimingSafeHelper = class {
     while (performance.now() - startTime < minMs) {
       let dummy = 0;
       for (let i = 0; i < 1e3; i++) {
-        dummy ^= Math.random() * 256 | 0;
+        dummy ^= (Math.random() * 256) | 0;
       }
     }
   }
@@ -130,7 +135,7 @@ var WebCryptAsym = class _WebCryptAsym {
     modulusLength: 4096,
     publicExponent: new Uint8Array([1, 0, 1]),
     // 65537
-    hash: "SHA-256"
+    hash: "SHA-256",
   };
   // Symmetric constants used in hybrid mode
   static AES_ALGORITHM = "AES-GCM";
@@ -224,7 +229,13 @@ var WebCryptAsym = class _WebCryptAsym {
    * @param {number} [keyLength=256] - Length of the derived key in bits
    * @returns {Promise<CryptoKey>} Derived AES key for encrypt/decrypt
    */
-  async deriveKeyPBKDF2(password, salt, iterations = _WebCryptAsym.PBKDF2_ITERATIONS, hash = _WebCryptAsym.PBKDF2_HASH, keyLength = 256) {
+  async deriveKeyPBKDF2(
+    password,
+    salt,
+    iterations = _WebCryptAsym.PBKDF2_ITERATIONS,
+    hash = _WebCryptAsym.PBKDF2_HASH,
+    keyLength = 256
+  ) {
     const encoder = new TextEncoder();
     const keyMaterial = await this._crypto.subtle.importKey(
       "raw",
@@ -238,7 +249,7 @@ var WebCryptAsym = class _WebCryptAsym {
         name: _WebCryptAsym.PBKDF2_ALGORITHM,
         salt,
         iterations,
-        hash
+        hash,
       },
       keyMaterial,
       { name: _WebCryptAsym.AES_ALGORITHM, length: keyLength },
@@ -298,7 +309,7 @@ var WebCryptAsym = class _WebCryptAsym {
   async generateKeyPair() {
     return await this._crypto.subtle.generateKey(_WebCryptAsym.RSA_KEY_PARAMS, true, [
       "encrypt",
-      "decrypt"
+      "decrypt",
     ]);
   }
   async exportPublicKey(publicKey) {
@@ -312,13 +323,13 @@ var WebCryptAsym = class _WebCryptAsym {
   async importPublicKey(b64) {
     const binary = this._base64ToArrayBuffer(b64);
     return await this._crypto.subtle.importKey("spki", binary, _WebCryptAsym.RSA_ALGORITHM, true, [
-      "encrypt"
+      "encrypt",
     ]);
   }
   async importPrivateKey(b64) {
     const binary = this._base64ToArrayBuffer(b64);
     return await this._crypto.subtle.importKey("pkcs8", binary, _WebCryptAsym.RSA_ALGORITHM, true, [
-      "decrypt"
+      "decrypt",
     ]);
   }
   /**
@@ -471,7 +482,7 @@ var WebCryptAsym = class _WebCryptAsym {
   // Maximum allowed encrypted data size (10MB) to prevent DoS attacks
   static MAX_ENCRYPTED_DATA_SIZE = 10 * 1024 * 1024;
   async decryptFile(fileOrBlob, privateKey) {
-    const fileSize = fileOrBlob.size || fileOrBlob.blob && fileOrBlob.blob.size;
+    const fileSize = fileOrBlob.size || (fileOrBlob.blob && fileOrBlob.blob.size);
     if (fileSize && fileSize > _WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
       throw new Error("File too large for decryption");
     }
@@ -654,7 +665,7 @@ var WebCryptAsym = class _WebCryptAsym {
     const keyPair = await this._crypto.subtle.generateKey(
       {
         name: _WebCryptAsym.SIGN_ALGORITHM,
-        namedCurve: curve
+        namedCurve: curve,
       },
       true,
       // extractable
@@ -665,7 +676,7 @@ var WebCryptAsym = class _WebCryptAsym {
     return {
       publicKey: keyPair.publicKey,
       privateKey: keyPair.privateKey,
-      publicKeyB64
+      publicKeyB64,
     };
   }
   /**
@@ -676,7 +687,7 @@ var WebCryptAsym = class _WebCryptAsym {
     const keyPair = await this._crypto.subtle.generateKey(
       {
         name: _WebCryptAsym.ED25519_ALGORITHM,
-        namedCurve: _WebCryptAsym.ED25519_CURVE
+        namedCurve: _WebCryptAsym.ED25519_CURVE,
       },
       true,
       // extractable
@@ -687,7 +698,7 @@ var WebCryptAsym = class _WebCryptAsym {
     return {
       publicKey: keyPair.publicKey,
       privateKey: keyPair.privateKey,
-      publicKeyB64
+      publicKeyB64,
     };
   }
   /**
@@ -701,7 +712,7 @@ var WebCryptAsym = class _WebCryptAsym {
       modulusLength,
       publicExponent: new Uint8Array([1, 0, 1]),
       // 65537
-      hash: _WebCryptAsym.SIGN_HASH
+      hash: _WebCryptAsym.SIGN_HASH,
     };
     const keyPair = await this._crypto.subtle.generateKey(rsaParams, true, ["sign", "verify"]);
     const publicKeyExported = await this._crypto.subtle.exportKey("spki", keyPair.publicKey);
@@ -709,7 +720,7 @@ var WebCryptAsym = class _WebCryptAsym {
     return {
       publicKey: keyPair.publicKey,
       privateKey: keyPair.privateKey,
-      publicKeyB64
+      publicKeyB64,
     };
   }
   /**
@@ -739,7 +750,7 @@ var WebCryptAsym = class _WebCryptAsym {
     const signature = await this._crypto.subtle.sign(
       {
         name: _WebCryptAsym.SIGN_ALGORITHM,
-        hash: { name: _WebCryptAsym.SIGN_HASH }
+        hash: { name: _WebCryptAsym.SIGN_HASH },
       },
       privateKey,
       data
@@ -760,7 +771,7 @@ var WebCryptAsym = class _WebCryptAsym {
       this._crypto,
       {
         name: _WebCryptAsym.SIGN_ALGORITHM,
-        hash: { name: _WebCryptAsym.SIGN_HASH }
+        hash: { name: _WebCryptAsym.SIGN_HASH },
       },
       publicKey,
       signature,
@@ -780,7 +791,7 @@ var WebCryptAsym = class _WebCryptAsym {
     const signature = await this._crypto.subtle.sign(
       {
         name: _WebCryptAsym.SIGN_ALGORITHM,
-        hash: { name: _WebCryptAsym.SIGN_HASH }
+        hash: { name: _WebCryptAsym.SIGN_HASH },
       },
       privateKey,
       hashBuffer
@@ -839,7 +850,7 @@ var WebCryptAsym = class _WebCryptAsym {
       this._crypto,
       {
         name: _WebCryptAsym.SIGN_ALGORITHM,
-        hash: { name: _WebCryptAsym.SIGN_HASH }
+        hash: { name: _WebCryptAsym.SIGN_HASH },
       },
       publicKey,
       signature,
@@ -859,7 +870,7 @@ var WebCryptAsym = class _WebCryptAsym {
     const signature = await this._crypto.subtle.sign(
       {
         name: "HMAC",
-        hash: { name: hash }
+        hash: { name: hash },
       },
       key,
       encodedData
@@ -882,7 +893,7 @@ var WebCryptAsym = class _WebCryptAsym {
       this._crypto,
       {
         name: "HMAC",
-        hash: { name: hash }
+        hash: { name: hash },
       },
       key,
       signature,
@@ -898,7 +909,7 @@ var WebCryptAsym = class _WebCryptAsym {
   async authenticatePoly1305(data, key) {
     const tag = await this._crypto.subtle.sign(
       {
-        name: "Poly1305"
+        name: "Poly1305",
       },
       key,
       data
@@ -1077,7 +1088,7 @@ var WebCryptAsym = class _WebCryptAsym {
    * @returns {Promise<{blob: Blob, filename: string}>} Decrypted file and metadata
    */
   async decryptFileWithProgress(fileOrBlob, privateKey, onProgress) {
-    const fileSize = fileOrBlob.size || fileOrBlob.blob && fileOrBlob.blob.size;
+    const fileSize = fileOrBlob.size || (fileOrBlob.blob && fileOrBlob.blob.size);
     if (fileSize && fileSize > _WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
       throw new Error("File too large for decryption");
     }
@@ -1161,7 +1172,7 @@ var WebCryptAsym = class _WebCryptAsym {
       const signature = await this._crypto.subtle.sign(
         {
           name: _WebCryptAsym.RSA_PSS_ALGORITHM,
-          saltLength: 32
+          saltLength: 32,
         },
         privateKey,
         data
@@ -1171,7 +1182,7 @@ var WebCryptAsym = class _WebCryptAsym {
       const signature = await this._crypto.subtle.sign(
         {
           name: _WebCryptAsym.SIGN_ALGORITHM,
-          hash: { name: _WebCryptAsym.SIGN_HASH }
+          hash: { name: _WebCryptAsym.SIGN_HASH },
         },
         privateKey,
         data
@@ -1196,7 +1207,7 @@ var WebCryptAsym = class _WebCryptAsym {
       return await this._crypto.subtle.verify(
         {
           name: _WebCryptAsym.RSA_PSS_ALGORITHM,
-          saltLength: 32
+          saltLength: 32,
         },
         publicKey,
         signature,
@@ -1206,7 +1217,7 @@ var WebCryptAsym = class _WebCryptAsym {
       return await this._crypto.subtle.verify(
         {
           name: _WebCryptAsym.SIGN_ALGORITHM,
-          hash: { name: _WebCryptAsym.SIGN_HASH }
+          hash: { name: _WebCryptAsym.SIGN_HASH },
         },
         publicKey,
         signature,
@@ -1268,7 +1279,7 @@ var WebCryptAsym = class _WebCryptAsym {
       // 64 MB
       iterations = 3,
       parallelism = 1,
-      keyLength = 256
+      keyLength = 256,
     } = options;
     const encoder = new TextEncoder();
     const keyMaterial = await this._crypto.subtle.importKey(
@@ -1285,7 +1296,7 @@ var WebCryptAsym = class _WebCryptAsym {
           salt,
           iterations,
           memoryCost: memory,
-          parallelism
+          parallelism,
         },
         keyMaterial,
         { name: _WebCryptAsym.AES_ALGORITHM, length: keyLength },
@@ -1672,7 +1683,7 @@ var WebCryptAsym = class _WebCryptAsym {
     const protectedHeaders = {
       alg: "RSA-OAEP",
       enc: "A256GCM",
-      ...customHeaders
+      ...customHeaders,
     };
     const headerStr = JSON.stringify(protectedHeaders);
     const encodedHeader = this._arrayBufferToBase64Url(encoder.encode(headerStr).buffer);
@@ -1720,18 +1731,25 @@ var WebCryptAsym = class _WebCryptAsym {
     if (parts.length !== 5) {
       throw new Error("Invalid JWE token structure (expected 5 parts)");
     }
-    const [encodedHeader, encodedEncryptedCek, encodedIv, encodedCiphertext, encodedAuthTag] = parts;
+    const [encodedHeader, encodedEncryptedCek, encodedIv, encodedCiphertext, encodedAuthTag] =
+      parts;
     const decoder = new TextDecoder();
     let header;
     try {
       const headerBuffer = this._base64UrlToArrayBuffer(encodedHeader);
       header = JSON.parse(decoder.decode(headerBuffer));
     } catch (e) {
-      const msg = typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production" ? `Failed to parse JWE header: ${e.message}` : "Failed to decrypt JWE";
+      const msg =
+        typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production"
+          ? `Failed to parse JWE header: ${e.message}`
+          : "Failed to decrypt JWE";
       throw new Error(msg);
     }
     if (header.alg !== "RSA-OAEP") {
-      const msg = typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production" ? `Unsupported JWE algorithm: ${header.alg}` : "Failed to decrypt JWE";
+      const msg =
+        typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production"
+          ? `Unsupported JWE algorithm: ${header.alg}`
+          : "Failed to decrypt JWE";
       throw new Error(msg);
     }
     if (header.enc !== "A256GCM") {
@@ -1746,7 +1764,10 @@ var WebCryptAsym = class _WebCryptAsym {
         encryptedCekBuffer
       );
     } catch (e) {
-      const msg = typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production" ? `Failed to decrypt Content Encryption Key (CEK): ${e.message}` : "Failed to decrypt JWE";
+      const msg =
+        typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production"
+          ? `Failed to decrypt Content Encryption Key (CEK): ${e.message}`
+          : "Failed to decrypt JWE";
       throw new Error(msg);
     }
     const cek = await this._crypto.subtle.importKey(
@@ -1772,7 +1793,10 @@ var WebCryptAsym = class _WebCryptAsym {
         combinedCiphertextAndTag
       );
     } catch (e) {
-      const msg = typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production" ? "Failed to decrypt JWE payload (authentication tag mismatch or invalid data)" : "Failed to decrypt JWE";
+      const msg =
+        typeof process !== "undefined" && process.env && process.env.NODE_ENV !== "production"
+          ? "Failed to decrypt JWE payload (authentication tag mismatch or invalid data)"
+          : "Failed to decrypt JWE";
       throw new Error(msg);
     }
     const textPayload = decoder.decode(decryptedBuffer);
@@ -1783,6 +1807,4 @@ var WebCryptAsym = class _WebCryptAsym {
     }
   }
 };
-export {
-  WebCryptAsym
-};
+export { WebCryptAsym };

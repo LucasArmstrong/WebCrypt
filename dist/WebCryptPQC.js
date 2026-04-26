@@ -1,13 +1,19 @@
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-}) : x)(function(x) {
+var __require = /* @__PURE__ */ (x =>
+  typeof require !== "undefined"
+    ? require
+    : typeof Proxy !== "undefined"
+      ? new Proxy(x, {
+          get: (a, b) => (typeof require !== "undefined" ? require : a)[b],
+        })
+      : x)(function (x) {
   if (typeof require !== "undefined") return require.apply(this, arguments);
   throw Error('Dynamic require of "' + x + '" is not supported');
 });
 
 // src/WebCryptPQC.js
 var WebCryptPQC = class _WebCryptPQC {
-  static WARNING = "\u26A0\uFE0F CRITICAL: WebCryptPQC is PLACEHOLDER/STUB implementation. Kyber and Dilithium are NOT real PQC - they use SHA-3 hashing stubs. Not suitable for production security. Integrate liboqs-js or wait for official implementation.";
+  static WARNING =
+    "\u26A0\uFE0F CRITICAL: WebCryptPQC is PLACEHOLDER/STUB implementation. Kyber and Dilithium are NOT real PQC - they use SHA-3 hashing stubs. Not suitable for production security. Integrate liboqs-js or wait for official implementation.";
   // ─────────────────────── Kyber Constants ───────────────────────
   static KYBER_512 = "Kyber512";
   static KYBER_768 = "Kyber768";
@@ -20,7 +26,7 @@ var WebCryptPQC = class _WebCryptPQC {
       publicKeySize: 800,
       privateKeySize: 1632,
       ciphertextSize: 768,
-      sharedSecretSize: 32
+      sharedSecretSize: 32,
     },
     [_WebCryptPQC.KYBER_768]: {
       name: "Kyber768",
@@ -28,7 +34,7 @@ var WebCryptPQC = class _WebCryptPQC {
       publicKeySize: 1184,
       privateKeySize: 2400,
       ciphertextSize: 1088,
-      sharedSecretSize: 32
+      sharedSecretSize: 32,
     },
     [_WebCryptPQC.KYBER_1024]: {
       name: "Kyber1024",
@@ -36,8 +42,8 @@ var WebCryptPQC = class _WebCryptPQC {
       publicKeySize: 1568,
       privateKeySize: 3168,
       ciphertextSize: 1568,
-      sharedSecretSize: 32
-    }
+      sharedSecretSize: 32,
+    },
   };
   // ─────────────────────── Dilithium Constants ───────────────────────
   static DILITHIUM_2 = "Dilithium2";
@@ -49,22 +55,22 @@ var WebCryptPQC = class _WebCryptPQC {
       securityLevel: "128-bit",
       publicKeySize: 1312,
       privateKeySize: 2544,
-      signatureSize: 2420
+      signatureSize: 2420,
     },
     [_WebCryptPQC.DILITHIUM_3]: {
       name: "Dilithium3",
       securityLevel: "192-bit",
       publicKeySize: 1952,
       privateKeySize: 4e3,
-      signatureSize: 3293
+      signatureSize: 3293,
     },
     [_WebCryptPQC.DILITHIUM_5]: {
       name: "Dilithium5",
       securityLevel: "256-bit",
       publicKeySize: 2592,
       privateKeySize: 4864,
-      signatureSize: 4595
-    }
+      signatureSize: 4595,
+    },
   };
   // ─────────────────────── Algorithm Constants ───────────────────────
   static HASH_SHA3_256 = "SHA3-256";
@@ -73,12 +79,12 @@ var WebCryptPQC = class _WebCryptPQC {
   static SUPPORTED_KYBER_LEVELS = [
     _WebCryptPQC.KYBER_512,
     _WebCryptPQC.KYBER_768,
-    _WebCryptPQC.KYBER_1024
+    _WebCryptPQC.KYBER_1024,
   ];
   static SUPPORTED_DILITHIUM_LEVELS = [
     _WebCryptPQC.DILITHIUM_2,
     _WebCryptPQC.DILITHIUM_3,
-    _WebCryptPQC.DILITHIUM_5
+    _WebCryptPQC.DILITHIUM_5,
   ];
   constructor() {
     this._crypto = this._getCrypto();
@@ -243,7 +249,8 @@ var WebCryptPQC = class _WebCryptPQC {
    * @returns {Promise<{sharedSecret: Uint8Array, kyberCiphertext: Uint8Array, rsaWrappedSharedSecret: Uint8Array}>}
    */
   async hybridEncapsulate(rsaPublicKey, kyberPublicKey, kyberLevel = _WebCryptPQC.KYBER_768) {
-    const { ciphertext: kyberCiphertext, sharedSecret: kyberSharedSecret } = await this.kyberEncapsulate(kyberPublicKey, kyberLevel);
+    const { ciphertext: kyberCiphertext, sharedSecret: kyberSharedSecret } =
+      await this.kyberEncapsulate(kyberPublicKey, kyberLevel);
     const rsaWrappedSharedSecret = await this._crypto.subtle.encrypt(
       { name: "RSA-OAEP", hash: "SHA-256" },
       rsaPublicKey,
@@ -258,7 +265,7 @@ var WebCryptPQC = class _WebCryptPQC {
     return {
       sharedSecret: finalSharedSecret,
       kyberCiphertext: new Uint8Array(kyberCiphertext),
-      rsaWrappedSharedSecret: new Uint8Array(rsaWrappedSharedSecret)
+      rsaWrappedSharedSecret: new Uint8Array(rsaWrappedSharedSecret),
     };
   }
   /**
@@ -271,7 +278,13 @@ var WebCryptPQC = class _WebCryptPQC {
    * @param {string} kyberLevel - Kyber level (default: Kyber768)
    * @returns {Promise<Uint8Array>} The hybrid shared secret
    */
-  async hybridDecapsulate(kyberCiphertext, rsaWrappedSharedSecret, rsaPrivateKey, kyberPrivateKey, kyberLevel = _WebCryptPQC.KYBER_768) {
+  async hybridDecapsulate(
+    kyberCiphertext,
+    rsaWrappedSharedSecret,
+    rsaPrivateKey,
+    kyberPrivateKey,
+    kyberLevel = _WebCryptPQC.KYBER_768
+  ) {
     try {
       const kyberSharedSecret = await this.kyberDecapsulate(
         kyberCiphertext,
@@ -317,7 +330,8 @@ var WebCryptPQC = class _WebCryptPQC {
       const digest = await this._crypto.subtle.digest(algorithm, data);
       return new Uint8Array(digest);
     } catch (e) {
-      const fallbackAlgorithm = bitLength <= 256 ? "SHA-256" : bitLength <= 384 ? "SHA-384" : "SHA-512";
+      const fallbackAlgorithm =
+        bitLength <= 256 ? "SHA-256" : bitLength <= 384 ? "SHA-384" : "SHA-512";
       const digest = await this._crypto.subtle.digest(fallbackAlgorithm, data);
       return new Uint8Array(digest).slice(0, bitLength / 8);
     }
@@ -409,7 +423,4 @@ var WebCryptPQC = class _WebCryptPQC {
   }
 };
 var WebCryptPQC_default = WebCryptPQC;
-export {
-  WebCryptPQC,
-  WebCryptPQC_default as default
-};
+export { WebCryptPQC, WebCryptPQC_default as default };
