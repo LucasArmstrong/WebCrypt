@@ -90,9 +90,14 @@ declare class WebCrypt {
    * Generates or derives an HMAC key.
    * @param password Optional password for PBKDF2 derivation (if provided, uses 600_000 iterations).
    * @param hash Hash algorithm (default: 'SHA-256').
+   * @param salt Optional salt for deterministic derivation.
    * @returns Usable HMAC key.
    */
-  generateHmacKey(password?: string, hash?: "SHA-256" | "SHA-384" | "SHA-512"): Promise<CryptoKey>;
+  generateHmacKey(
+    password?: string,
+    hash?: "SHA-256" | "SHA-384" | "SHA-512",
+    salt?: Uint8Array | string
+  ): Promise<CryptoKey>;
 
   /**
    * Computes HMAC on data.
@@ -115,11 +120,13 @@ declare class WebCrypt {
    * Generate a quantum-resistant HMAC key using SHA-3 hash.
    * @param password Optional password for derivation (600k iterations)
    * @param hash Hash algorithm: 'SHA3-256' | 'SHA3-384' | 'SHA3-512' (default: SHA3-256)
+   * @param salt Optional salt for deterministic derivation.
    * @returns Usable HMAC key with SHA-3
    */
   generateHmacKeySHA3(
     password?: string,
-    hash?: "SHA3-256" | "SHA3-384" | "SHA3-512"
+    hash?: "SHA3-256" | "SHA3-384" | "SHA3-512",
+    salt?: Uint8Array | string
   ): Promise<CryptoKey>;
 
   /**

@@ -2,3 +2,9 @@
 /coverage
 /.vscode
 /dist
+.state-graph-mcp
+
+# vision-memory-mcp local database
+.vision-memory-mcp/
+.env
+.state-memory-mcp

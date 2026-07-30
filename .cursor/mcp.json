@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "state-graph-mcp": {
+      "command": "state-graph-mcp",
+      "args": ["run"]
+    },
+    "vision-memory-mcp": {
+      "command": "vision-memory-mcp",
+      "args": ["run"],
+      "env": {
+        "LANCEDB_PATH": "./.vision-memory-mcp"
+      }
+    },
+    "state-memory-mcp": {
+      "command": "state-memory-mcp",
+      "args": ["run"],
+      "env": {
+        "STATE_MEMORY_MCP_PROJECT": "webcrypt"
+      }
+    }
+  }
+}

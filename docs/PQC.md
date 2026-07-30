@@ -1,10 +1,20 @@
 # Post-Quantum Cryptography (WebCryptPQC)
 
-> ⚠️ **PLACEHOLDER IMPLEMENTATION** — Kyber and Dilithium use SHA-3 hashing stubs, NOT real lattice-based cryptography. Do not use for production security. See [roadmap](#migration-path) below.
+> ⚠️ **PLACEHOLDER IMPLEMENTATION** — Kyber and Dilithium use SHA-3 hashing stubs, NOT real lattice-based cryptography. Do not use for production security. See [migration path](#migration-path) below.
+
+---
+
+## Limitation of Liability & Security Disclaimer
+
+WebCryptPQC is maintained by [PuterVision LLC](https://putervision.com) and provided "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+
+IN NO EVENT SHALL PUTERVISION LLC, ITS AFFILIATES, OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
 
 ## Overview
 
-WebCryptPQC provides a **framework** for post-quantum key exchange and digital signatures using NIST PQC finalists. The current implementation is a placeholder that mirrors the real API surface, allowing you to build against it today and swap in real PQC when `liboqs-js` integration lands in v0.6+.
+WebCryptPQC provides a **framework** for post-quantum key exchange and digital signatures using NIST PQC finalists. The current implementation is a placeholder that mirrors the real API surface, allowing you to build against it today and swap in real PQC when official native Web Crypto PQC standards or `liboqs-js` integrations land.
 
 ## Kyber Key Encapsulation (KEM)
 
@@ -141,8 +151,8 @@ pqc.dilithiumPrivateKeyFromBase64(b64: string): Uint8Array
 ## Migration Path
 
 ```
-v0.5.x (Current): Placeholder stubs → Integrate liboqs-js manually
-v0.6+ (Future):   Official liboqs-js integration → Production-ready PQC
+v0.6.x (Current): Placeholder stubs → Integrate liboqs-js manually
+v0.7+ (Future):   Official liboqs-js integration → Production-ready PQC
 2030+:            Pure lattice-based cryptography → Full quantum resistance
 ```
 

@@ -2,10 +2,10 @@
 
 ## Supported Versions
 
-| Version | Supported              |
-| ------- | ---------------------- |
-| 0.5.x   | ✅ Active support      |
-| < 0.5   | ❌ No longer supported |
+| Version | Supported               |
+| ------- | ----------------------- |
+| 0.6.x   | ✅ Active support       |
+| < 0.6   | ❌ Legacy / unsupported |
 
 ## Reporting a Vulnerability
 
@@ -15,7 +15,7 @@ If you discover a security vulnerability in WebCrypt, please report it responsib
 
 ### How to Report
 
-1. Email: Open a private security advisory via [GitHub Security Advisories](https://github.com/lucasarmstrong/webcrypt/security/advisories/new)
+1. Email / Advisory: Open a private security advisory via [GitHub Security Advisories](https://github.com/putervision/webcrypt/security/advisories/new) or contact [PuterVision LLC](https://putervision.com).
 2. Include:
    - Description of the vulnerability
    - Steps to reproduce
@@ -28,6 +28,14 @@ If you discover a security vulnerability in WebCrypt, please report it responsib
 - **Assessment** within 1 week
 - **Fix timeline** communicated after assessment
 - **Credit** given in the release notes (unless you prefer anonymity)
+
+## Limitation of Liability & Disclaimer of Warranty
+
+WebCrypt is maintained by [PuterVision LLC](https://putervision.com) and provided "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+IN NO EVENT SHALL PUTERVISION LLC, ITS AFFILIATES, OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+USERS AND DEVELOPERS ARE SOLELY RESPONSIBLE FOR VERIFYING CRYPTOGRAPHIC PARAMETERS, CONDUCTING INDEPENDENT SECURITY AUDITS, AND DETERMINING SUITABILITY FOR PRODUCTION DEPLOYMENTS.
 
 ## Security Considerations
 

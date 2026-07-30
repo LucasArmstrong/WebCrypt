@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-07-29
+
+### Security & Accuracy
+
+- **Deterministic HMAC Key Derivation**: Fixed password-based HMAC key derivation in `WebCrypt.js` (`generateHmacKey` and `generateHmacKeySHA3`) by adding salt configuration/defaults (`WebCrypt.DEFAULT_HMAC_SALT`) for reproducible verification.
+- **Non-blocking Timing-Safe Helper**: Refactored `TimingSafeHelper.sleepWithDummyOps()` to use non-blocking async timers (`setTimeout`/`Promise`) instead of a CPU-blocking tight spin loop.
+- **Limitation of Liability**: Added explicit Limitation of Liability & Warranty Disclaimer sections across `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/index.html`, `docs/PQC.md`, and code headers.
+
+### Performance
+
+- **High-Speed Chunked Base64 Conversion**: Replaced O(N²) string concatenation in Base64 encoding across `WebCrypt.js`, `WebCryptAsym.js`, and `WebCryptPQC.js` with 32KB block chunking for zero memory explosion and stack safety.
+- **Unref Key Cache Timers**: Safely `.unref()` key cache cleanup intervals in Node.js environments to prevent open process handle leaks.
+
+### Webpage Expansion & Documentation
+
+- **Expanded Webpage**: Transformed `docs/index.html` into a rich documentation site featuring release badges, comprehensive code examples (Symmetric, Asymmetric RSA-4096, WebRTC E2EE, HMAC, PQC stubs), a complete API reference table, and a dedicated Limitation of Liability section.
+- **PuterVision LLC Website Linking**: Updated all PuterVision LLC brand labels and links to point directly to [https://putervision.com](https://putervision.com).
+- **Author Scrub**: Scrubbed personal author references across package metadata, LICENSE, documentation, code, and website files.
+
 ## [0.5.5] - 2026
 
 ### Added

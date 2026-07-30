@@ -1,9 +1,13 @@
 // src/WebCryptPQC.js
 // Post-Quantum Cryptography (PQC) module - provides NIST-selected algorithms
-// version: 0.5.4 - Quantum-resist core
+// version: 0.6.0 - Quantum-resist core
 
 /**
  * WebCryptPQC – Post-quantum key exchange and digital signatures
+ * Maintained by PuterVision LLC (https://putervision.com).
+ *
+ * DISCLAIMER: Provided "AS IS" without warranty of any kind. PuterVision LLC
+ * disclaims all liability for data loss, security breaches, or misuse.
  *
  * Implements NIST PQC finalists:
  * - Kyber: Lattice-based Key Encapsulation Mechanism (KEM)
@@ -522,11 +526,13 @@ export class WebCryptPQC {
     return { publicKey, privateKey };
   }
 
+  // Chunked block conversion avoids stack overflow and O(N^2) memory churn
   _arrayBufferToBase64(buffer) {
-    let binary = "";
     const bytes = new Uint8Array(buffer);
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    const CHUNK_SIZE = 0x8000; // 32KB chunks
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
     }
     return btoa(binary);
   }

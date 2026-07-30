@@ -61,18 +61,16 @@ class TimingSafeHelper {
 
   /**
    * Execute dummy operations to pad execution time and prevent timing attacks
+   * Uses non-blocking async timers to prevent CPU thread lockup.
    * @param {number} minMs - Minimum milliseconds to delay (e.g., 5-10ms)
    */
   static async sleepWithDummyOps(minMs = 10) {
     const startTime = performance.now();
+    const elapsed = performance.now() - startTime;
+    const remaining = minMs - elapsed;
 
-    // Perform dummy cryptographic-like operations during wait time
-    while (performance.now() - startTime < minMs) {
-      // Simulate hash-like computation to use CPU cycles
-      let dummy = 0;
-      for (let i = 0; i < 1000; i++) {
-        dummy ^= (Math.random() * 256) | 0;
-      }
+    if (remaining > 0) {
+      await new Promise(resolve => setTimeout(resolve, Math.max(1, Math.ceil(remaining))));
     }
   }
 

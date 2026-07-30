@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebCrypt — Zero-Dependency AES-256-GCM & RSA Cryptography Suite</title>
+  <meta name="description" content="Zero-dependency JavaScript AES-256-GCM encryption library for text, files & WebRTC E2EE. Pure Web Crypto API with OWASP-compliant PBKDF2 (600,000 iterations). Maintained by PuterVision LLC.">
+  <meta name="keywords" content="webcrypt, aes-256-gcm, cryptography, web crypto api, zero dependency, rsa-4096, hybrid encryption, e2ee, webrtc, browser encryption, putervision">
+  <meta name="author" content="PuterVision LLC (https://putervision.com)">
+  <meta name="theme-color" content="#0b0f19">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="glow-backdrop"></div>
+
+  <header>
+    <div class="logo">
+      <a href="https://putervision.com" target="_blank" rel="noopener noreferrer" class="brand-link"><img src="putervision-icon.png" alt="PuterVision Icon" class="nav-brand-img"> PuterVision</a>
+      <span class="logo-sep">/</span>
+      <a href="https://github.com/putervision/webcrypt" class="logo-link"><img src="webcrypt-icon.png" alt="WebCrypt Icon" class="nav-brand-img"><span class="logo-text">WebCrypt</span></a>
+    </div>
+    <nav aria-label="Main Navigation">
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#quickstart">Quickstart</a></li>
+        <li><a href="#security">Security & Legal</a></li>
+        <li><a href="#api">API Reference</a></li>
+      </ul>
+    </nav>
+    <a href="https://github.com/putervision/webcrypt" class="btn-github" target="_blank" rel="noopener noreferrer" aria-label="Star on GitHub">
+      <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" role="img" style="color: #fbbf24">
+        <path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"></path>
+      </svg>
+      Star on
+      <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" role="img">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+      </svg>
+    </a>
+  </header>
+
+  <main class="container">
+    <!-- Hero Section -->
+    <section class="hero">
+      <span class="badge">RELEASE v0.6.0 • ZERO DEPENDENCIES • PURE WEB CRYPTO API</span>
+      <h1>Zero-Dependency Web Cryptography Suite</h1>
+      <p>High-performance AES-256-GCM encryption for text, files, and WebRTC E2EE insertable streams. Maintained by <a href="https://putervision.com" target="_blank" rel="noopener noreferrer" style="color: var(--accent-cyan); text-decoration: underline;">PuterVision LLC</a> natively for browser and Node.js Web Crypto environments.</p>
+      
+      <div class="cta-group">
+        <a href="#quickstart" class="btn-primary">Get Started</a>
+        <a href="#features" class="btn-secondary">Explore Features</a>
+        <a href="#api" class="btn-secondary">API Reference</a>
+      </div>
+    </section>
+
+    <!-- Key Features Grid -->
+    <section id="features" class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>AES-256-GCM Encryption</h3>
+        <p>Authenticated symmetric encryption with unique 128-bit salt and 96-bit IV per payload for max integrity and secrecy.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔑</div>
+        <h3>RSA-4096 Hybrid Mode</h3>
+        <p>Asymmetric public-key encryption combining RSA-OAEP key wrapping with high-speed AES-256-GCM payload encryption.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📡</div>
+        <h3>WebRTC E2EE Streams</h3>
+        <p>Real-time video/audio media frame encryption using WebRTC Insertable Streams and transform streams.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Zero Dependencies</h3>
+        <p>100% native Web Crypto API (`globalThis.crypto.subtle`) execution in Chrome, Edge, Firefox, Safari, and Node.js 18+.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🛡️</div>
+        <h3>OWASP 2025+ Compliant</h3>
+        <p>Quantum-safe key derivation using PBKDF2 with 600,000 iterations and timing-attack resistant comparisons.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📁</div>
+        <h3>File & Stream Chunks</h3>
+        <p>Chunked file encryption with constant memory usage, streaming support, and automatic unref'd key caching.</p>
+      </div>
+    </section>
+
+    <!-- Code Quickstart Section -->
+    <section id="quickstart" class="card">
+      <div class="section-title">
+        <span class="badge">Code Quickstart & Examples</span>
+        <h2>Comprehensive Suite Examples</h2>
+      </div>
+
+      <h3 style="color: var(--accent-cyan); margin-bottom: 0.5rem;">1. Symmetric AES-256-GCM Text & Data</h3>
+      <div class="code-box">
+<span class="kw">import</span> { WebCrypt } <span class="kw">from</span> <span class="str">"webcrypt"</span>;
+
+<span class="kw">const</span> crypt = <span class="kw">new</span> <span class="fn">WebCrypt</span>();
+
+<span class="cm">// Encrypt text with password (OWASP 600k PBKDF2 + AES-256-GCM)</span>
+<span class="kw">const</span> encryptedB64 = <span class="kw">await</span> crypt.<span class="fn">encryptText</span>(
+  <span class="str">"Confidential data payload"</span>, 
+  <span class="str">"StrongUserPassword123!"</span>
+);
+
+<span class="cm">// Decrypt text back to plaintext</span>
+<span class="kw">const</span> decryptedText = <span class="kw">await</span> crypt.<span class="fn">decryptText</span>(
+  encryptedB64, 
+  <span class="str">"StrongUserPassword123!"</span>
+);
+
+console.<span class="fn">log</span>(decryptedText); <span class="cm">// "Confidential data payload"</span>
+      </div>
+
+      <h3 style="color: var(--accent-indigo); margin-top: 1.5rem; margin-bottom: 0.5rem;">2. Asymmetric RSA-4096 Hybrid Public Key Encryption</h3>
+      <div class="code-box">
+<span class="kw">import</span> { WebCryptAsym } <span class="kw">from</span> <span class="str">"webcrypt/webcrypt-asym"</span>;
+
+<span class="kw">const</span> asym = <span class="kw">new</span> <span class="fn">WebCryptAsym</span>();
+<span class="kw">const</span> keys = <span class="kw">await</span> asym.<span class="fn">generateKeyPair</span>();
+
+<span class="cm">// Encrypt text with public key</span>
+<span class="kw">const</span> encrypted = <span class="kw">await</span> asym.<span class="fn">encryptText</span>(<span class="str">"Top Secret Document"</span>, keys.publicKey);
+
+<span class="cm">// Decrypt text with private key</span>
+<span class="kw">const</span> decrypted = <span class="kw">await</span> asym.<span class="fn">decryptText</span>(encrypted, keys.privateKey);
+      </div>
+
+      <h3 style="color: var(--accent-emerald); margin-top: 1.5rem; margin-bottom: 0.5rem;">3. Deterministic HMAC Authentication (SHA-256 / SHA-3)</h3>
+      <div class="code-box">
+<span class="kw">const</span> key = <span class="kw">await</span> crypt.<span class="fn">generateHmacKey</span>(<span class="str">"my-secret-password"</span>, <span class="str">"SHA-256"</span>);
+<span class="kw">const</span> tag = <span class="kw">await</span> crypt.<span class="fn">computeHmac</span>(<span class="str">"Message to sign"</span>, key);
+<span class="kw">const</span> isValid = <span class="kw">await</span> crypt.<span class="fn">verifyHmac</span>(<span class="str">"Message to sign"</span>, tag, key);
+      </div>
+    </section>
+
+    <!-- API Reference Grid Section -->
+    <section id="api" class="card">
+      <div class="section-title">
+        <span class="badge">Complete API Reference</span>
+        <h2>Exported Modules & Signatures</h2>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; margin-top: 1rem; color: var(--text-primary); text-align: left;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border-color); color: var(--accent-cyan);">
+              <th style="padding: 0.75rem;">Module</th>
+              <th style="padding: 0.75rem;">Method</th>
+              <th style="padding: 0.75rem;">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.75rem; font-weight: 600;">`WebCrypt`</td>
+              <td style="padding: 0.75rem;">`encryptText(text, password)`</td>
+              <td style="padding: 0.75rem;">AES-256-GCM text encryption returning Base64 salt+iv+ciphertext.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.75rem; font-weight: 600;">`WebCrypt`</td>
+              <td style="padding: 0.75rem;">`decryptText(b64, password)`</td>
+              <td style="padding: 0.75rem;">Decrypts Base64 string back to plain text.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.75rem; font-weight: 600;">`WebCrypt`</td>
+              <td style="padding: 0.75rem;">`encryptFile(file, password)`</td>
+              <td style="padding: 0.75rem;">Streaming file encryption returning encrypted Blob.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.75rem; font-weight: 600;">`WebCrypt`</td>
+              <td style="padding: 0.75rem;">`generateHmacKey(password, hash, salt)`</td>
+              <td style="padding: 0.75rem;">Derives deterministic HMAC key using PBKDF2.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.75rem; font-weight: 600;">`WebCryptAsym`</td>
+              <td style="padding: 0.75rem;">`generateKeyPair()`</td>
+              <td style="padding: 0.75rem;">Generates 4096-bit RSA-OAEP key pair.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.75rem; font-weight: 600;">`WebCryptAsym`</td>
+              <td style="padding: 0.75rem;">`encryptText(text, publicKey)`</td>
+              <td style="padding: 0.75rem;">Hybrid RSA-4096 + AES-256-GCM text encryption.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.75rem; font-weight: 600;">`TimingSafeHelper`</td>
+              <td style="padding: 0.75rem;">`constantTimeCompareBuffers(a, b)`</td>
+              <td style="padding: 0.75rem;">Constant-time buffer comparison preventing timing oracles.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Environment & Legal Section -->
+    <section id="security" class="card">
+      <div class="section-title">
+        <span class="badge">Security & Legal Policy</span>
+        <h2>Limitation of Liability & License</h2>
+      </div>
+
+      <p style="text-align: center; color: var(--text-secondary); max-width: 750px; margin: 0 auto 1.5rem;">
+        WebCrypt is maintained by <a href="https://putervision.com" target="_blank" rel="noopener noreferrer" style="color: var(--accent-cyan); text-decoration: underline;">PuterVision LLC</a> and released under the MIT License.
+      </p>
+
+      <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 1.25rem; font-size: 0.88rem; color: #fca5a5; line-height: 1.6;">
+        <strong style="color: #f87171; display: block; margin-bottom: 0.5rem; font-size: 0.95rem;">DISCLAIMER OF WARRANTY & LIMITATION OF LIABILITY</strong>
+        WEBCRYPT IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL PUTERVISION LLC, ITS AFFILIATES, OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+      </div>
+    </section>
+
+    <footer>
+      <p>© 2025-2026 <a href="https://putervision.com" target="_blank" rel="noopener noreferrer">PuterVision LLC</a>. Released under the MIT License.</p>
+      <p style="margin-top: 0.5rem; font-size: 0.82rem;">Pure Web Crypto API • Zero Dependencies • Local Execution • Maintained by <a href="https://putervision.com" target="_blank" rel="noopener noreferrer">PuterVision LLC</a></p>
+    </footer>
+  </main>
+</body>
+</html>
+

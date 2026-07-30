@@ -1,8 +1,12 @@
 // src/WebCrypt.js
-// version: 0.5.4
+// version: 0.6.0
 
 /**
  * WebCrypt — Password-based symmetric encryption using AES-256-GCM.
+ * Maintained by PuterVision LLC (https://putervision.com).
+ *
+ * DISCLAIMER: Provided "AS IS" without warranty of any kind. PuterVision LLC
+ * disclaims all liability for data loss, security breaches, or misuse.
  *
  * Features:
  * - Text and JSON data encryption/decryption
@@ -26,7 +30,7 @@ export class WebCrypt {
   static IV_LENGTH = 12;
   // SALT_LENGTH: 16 bytes (128 bits), random per-message salt for PBKDF2 to prevent rainbow table attacks
   static SALT_LENGTH = 16;
-  // PBKDF2_ITERATIONS: 600,000 rounds of key stretching; OWASP-recommended for 2025 to resist brute-force and ASIC attacks (even post-quantum)
+  // PBKDF2_ITERATIONS: 600,000 rounds of key stretching; OWASP-recommended for 2025+ to resist brute-force and ASIC attacks
   static PBKDF2_ITERATIONS = 600_000;
   // HASH_ALGORITHM: SHA-256 for PBKDF2 hashing; collision-resistant and widely supported
   static HASH_ALGORITHM = "SHA-256";
@@ -34,6 +38,8 @@ export class WebCrypt {
   static CHUNK_SIZE = 8 * 1024 * 1024;
   // WEBRTC_SALT: Fixed salt for WebRTC key derivation; ensures consistent keys between peers without transmission
   static WEBRTC_SALT = new TextEncoder().encode("WebCrypt-E2EE-v1-2025");
+  // DEFAULT_HMAC_SALT: Default static salt for deterministic password-derived HMAC key derivation
+  static DEFAULT_HMAC_SALT = new TextEncoder().encode("WebCrypt-HMAC-DefaultSalt-v0.6");
 
   // Caches derived keys for instant reuse with same password/salt (performance optimization)
   static MAX_KEY_CACHE_SIZE = 10; // LRU cache max size
@@ -55,7 +61,15 @@ export class WebCrypt {
     // Then clean up every minute
     this._keyCacheCleanupInterval = setInterval(() => {
       this._cleanupExpiredKeys();
-    }, 60_000); // 1 minute
+    }, 60_000);
+
+    // Unref timer in Node.js environments to prevent holding the event loop open
+    if (
+      this._keyCacheCleanupInterval &&
+      typeof this._keyCacheCleanupInterval.unref === "function"
+    ) {
+      this._keyCacheCleanupInterval.unref();
+    }
   }
 
   /**
@@ -162,14 +176,14 @@ export class WebCrypt {
     return key;
   }
 
-  // ────────────────────── Safe Base64 (stack-safe, fast) ──────────────────────
-  // Iterative base64 conversion: Avoids recursion/stack issues for large data, faster than array methods
+  // ────────────────────── Safe Base64 (stack-safe, high performance) ──────────────────────
+  // Chunked conversion avoids stack overflow and O(N^2) memory churn on large buffers
   _arrayBufferToBase64(buffer) {
-    let binary = "";
     const bytes = new Uint8Array(buffer);
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    const CHUNK_SIZE = 0x8000; // 32KB chunks
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
     }
     return btoa(binary);
   }
@@ -399,14 +413,19 @@ export class WebCrypt {
    * Generates or derives an HMAC key.
    * @param {string} [password] Optional password for PBKDF2 derivation (if provided, uses 600_000 iterations like existing ops).
    * @param {string} [hash='SHA-256'] Hash algorithm.
+   * @param {Uint8Array|string} [customSalt=null] Optional salt for deterministic derivation (defaults to WebCrypt.DEFAULT_HMAC_SALT if omitted).
    * @returns {Promise<CryptoKey>} Usable HMAC key.
    */
-  async generateHmacKey(password, hash = "SHA-256") {
+  async generateHmacKey(password, hash = "SHA-256", customSalt = null) {
     let keyMaterial;
 
     if (password) {
-      // Derive from password using PBKDF2, mirroring existing symmetric key derivation
-      const salt = crypto.getRandomValues(new Uint8Array(16)); // 128-bit salt
+      // Derive from password using PBKDF2 with deterministic salt
+      const salt = customSalt
+        ? typeof customSalt === "string"
+          ? new TextEncoder().encode(customSalt)
+          : customSalt
+        : WebCrypt.DEFAULT_HMAC_SALT;
       const pbkdf2Params = {
         name: "PBKDF2",
         salt,
@@ -444,7 +463,7 @@ export class WebCrypt {
   async computeHmac(data, key) {
     const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
     const signature = await crypto.subtle.sign("HMAC", key, dataBuffer);
-    return btoa(String.fromCharCode(...new Uint8Array(signature))); // Base64 encode, consistent with existing outputs
+    return this._arrayBufferToBase64(signature);
   }
 
   /**
@@ -456,7 +475,7 @@ export class WebCrypt {
    */
   async verifyHmac(data, hmac, key) {
     const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
-    const signatureBuffer = Uint8Array.from(atob(hmac), c => c.charCodeAt(0));
+    const signatureBuffer = new Uint8Array(this._base64ToArrayBuffer(hmac));
     return crypto.subtle.verify("HMAC", key, signatureBuffer, dataBuffer);
   }
 
@@ -466,13 +485,18 @@ export class WebCrypt {
    * Generate a quantum-resistant HMAC key using SHA-3 hash.
    * @param {string} [password] Optional password for derivation (600k iterations)
    * @param {string} [hash='SHA3-256'] Hash algorithm: 'SHA3-256', 'SHA3-384', 'SHA3-512'
+   * @param {Uint8Array|string} [customSalt=null] Optional salt for deterministic derivation (defaults to WebCrypt.DEFAULT_HMAC_SALT if omitted)
    * @returns {Promise<CryptoKey>} Usable HMAC key with SHA-3
    */
-  async generateHmacKeySHA3(password, hash = "SHA3-256") {
+  async generateHmacKeySHA3(password, hash = "SHA3-256", customSalt = null) {
     let keyMaterial;
 
     if (password) {
-      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const salt = customSalt
+        ? typeof customSalt === "string"
+          ? new TextEncoder().encode(customSalt)
+          : customSalt
+        : WebCrypt.DEFAULT_HMAC_SALT;
       const encoder = new TextEncoder();
       let material = new Uint8Array(password.length + salt.byteLength);
       material.set(encoder.encode(password));

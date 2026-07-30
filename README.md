@@ -452,13 +452,15 @@ See [docs/PQC.md](./docs/PQC.md) for the full API reference.
 | Signatures            | ECDSA       | ⚠️ Vulnerable to Shor's algorithm                  |
 | PQC (Kyber/Dilithium) | Stubs       | ❌ Not real PQC yet                                |
 
-### Security hardening (v0.5.3+)
+### Security hardening (v0.6.0)
 
-- PBKDF2 iterations: **600,000** (OWASP 2023 compliant)
+- PBKDF2 iterations: **600,000** (OWASP 2025+ compliant)
 - Unique **128-bit salt** per message/file
 - Unique **96-bit IV** per chunk/frame
-- Key cache with **5-minute TTL** and LRU eviction
-- Timing-attack resistant verification via `TimingSafeHelper`
+- Key cache with **5-minute TTL**, LRU eviction, and automatic `unref()` timer cleanup
+- Deterministic password-derived HMAC key derivation (`generateHmacKey` / `generateHmacKeySHA3`)
+- Non-blocking timing-attack resistant verification via `TimingSafeHelper`
+- High-speed 32KB chunked Base64 conversion
 - Input validation / DoS protection (10 MB size limit)
 - Error messages sanitized in production (`NODE_ENV=production`)
 - No keys ever leave your device
@@ -494,7 +496,28 @@ const { WebCrypt } = require("webcrypt");
 ## License
 
 MIT License — free for personal and commercial use.  
-© 2025 [Lucas Armstrong](https://github.com/lucasarmstrong/webcrypt)
+© 2025-2026 [PuterVision LLC](https://putervision.com)
 
-No telemetry. No servers. No backdoors.  
-Just pure, strong encryption that works offline, forever.
+---
+
+## Legal & Usage Disclaimers
+
+> [!WARNING]
+> **Limitation of Liability & Disclaimer of Warranty**  
+> WebCrypt is maintained by [PuterVision LLC](https://putervision.com) and provided **"AS IS"**, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL PUTERVISION LLC, ITS AFFILIATES, OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. USERS AND DEVELOPERS ARE SOLELY RESPONSIBLE FOR VERIFYING CRYPTOGRAPHIC PARAMETERS, CONDUCTING INDEPENDENT SECURITY AUDITS, AND DETERMINING SUITABILITY FOR PRODUCTION DEPLOYMENTS.
+
+> [!NOTE]
+> **Data Privacy & Local Execution Guarantee**  
+> WebCrypt operations execute 100% locally in your browser or Node.js runtime using the native Web Crypto API. No private keys, passwords, plaintext data, or encrypted payloads are ever transmitted to external cloud servers.
+
+> [!IMPORTANT]
+> **Third-Party AI Model & API Fees Disclaimer**  
+> This software is provided as free, open-source software under the MIT License. If integrated into developer AI agent frameworks (such as OpenAI, Anthropic Claude, Google Gemini, xAI Grok, or Ollama), any third-party API usage and billing fees remain the sole responsibility of the user. [PuterVision LLC](https://putervision.com) is not responsible for third-party API costs.
+
+> [!NOTE]
+> **Trademark & Open Specification Attributions**  
+> Model Context Protocol (MCP) is an open specification created by Anthropic, PBC. Web Crypto API, W3C standards, and third-party IDE trademarks are property of their respective owners. [PuterVision LLC](https://putervision.com) is an independent open-source software developer.
+
+> [!NOTE]
+> **Performance & Cost Savings Estimates**  
+> Encryption performance benchmarks, throughput speeds, and zero-dependency efficiency metrics reported in documentation are derived from standard browser and Node.js WebCrypto benchmarks and may vary based on hardware acceleration.

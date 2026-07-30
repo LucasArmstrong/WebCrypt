@@ -41,8 +41,8 @@ describe("WebCryptAsym JSON Web Encryption (JWE)", () => {
     const jwe = await crypt.encryptJWE(payload, keys.publicKey);
 
     const parts = jwe.split(".");
-    // Tamper with the ciphertext (assuming it's base64url encoded, changing a char is enough)
-    parts[3] = parts[3].substring(0, parts[3].length - 1) + (parts[3].endsWith("A") ? "B" : "A");
+    // Tamper with the ciphertext (changing first char guarantees altering decoded ciphertext bytes)
+    parts[3] = (parts[3].startsWith("A") ? "B" : "A") + parts[3].slice(1);
     const tamperedJwe = parts.join(".");
 
     await expect(crypt.decryptJWE(tamperedJwe, keys.privateKey)).rejects.toThrow();

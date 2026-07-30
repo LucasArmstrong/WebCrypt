@@ -1,9 +1,13 @@
 // src/WebCryptAsym.js
-// version: 0.5.5
+// version: 0.6.0
 import TimingSafeHelper from "./TimingSafeHelper.js"; // Add timing-safe helper for DoS protection and constant-time comparisons
 
 /**
  * WebCryptAsym — RSA-4096 hybrid asymmetric encryption, digital signatures, and key exchange.
+ * Maintained by PuterVision LLC (https://putervision.com).
+ *
+ * DISCLAIMER: Provided "AS IS" without warranty of any kind. PuterVision LLC
+ * disclaims all liability for data loss, security breaches, or misuse.
  *
  * Features:
  * - RSA-4096 hybrid text/file encryption (RSA-OAEP wraps ephemeral AES-256-GCM keys)
@@ -84,7 +88,15 @@ export class WebCryptAsym {
     // Then clean up every minute
     this._keyCacheCleanupInterval = setInterval(() => {
       this._cleanupExpiredKeys();
-    }, 60_000); // 1 minute
+    }, 60_000);
+
+    // Unref timer in Node.js environments to avoid keeping event loop alive
+    if (
+      this._keyCacheCleanupInterval &&
+      typeof this._keyCacheCleanupInterval.unref === "function"
+    ) {
+      this._keyCacheCleanupInterval.unref();
+    }
   }
 
   /**
@@ -167,13 +179,13 @@ export class WebCryptAsym {
   }
 
   // ────────────────────── Safe Base64 Utilities ──────────────────────
-  // Iterative conversion avoids recursion/stack overflow on large buffers
-  // Significantly faster and more memory-efficient than common Array.join methods
+  // Chunked block conversion avoids stack overflow and O(N^2) memory overhead on multi-MB buffers
   _arrayBufferToBase64(buffer) {
-    let binary = "";
     const bytes = new Uint8Array(buffer);
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    const CHUNK_SIZE = 0x8000; // 32KB chunks
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
     }
     return btoa(binary);
   }

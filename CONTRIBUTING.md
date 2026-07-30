@@ -1,12 +1,12 @@
 # Contributing to WebCrypt
 
-Thank you for your interest in contributing to WebCrypt! This document provides guidelines for contributing.
+Thank you for your interest in contributing to WebCrypt! This document provides guidelines for contributing to WebCrypt, maintained by [PuterVision LLC](https://putervision.com).
 
 ## Development Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/lucasarmstrong/webcrypt.git
+git clone https://github.com/putervision/webcrypt.git
 cd webcrypt
 
 # Install dependencies
@@ -71,12 +71,13 @@ webcrypt/
 5. Commit with clear, descriptive messages
 6. Open a PR against `main`
 
-### Security
+### Security & Disclaimer
 
 - **Do NOT open public issues for security vulnerabilities** — see [SECURITY.md](./SECURITY.md)
 - All crypto-related changes require careful review
 - Update `.d.ts` type definitions when changing public API signatures
+- Contributions are accepted subject to the [PuterVision LLC](https://putervision.com) MIT License and Limitation of Liability disclaimer.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree that your contributions will be licensed under the MIT License by [PuterVision LLC](https://putervision.com).

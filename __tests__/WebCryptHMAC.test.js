@@ -68,14 +68,28 @@ describe("WebCrypt HMAC Tests", () => {
     expect(key1).not.toBe(key2);
   });
 
-  test("generateHmacKey() with same password produces consistent keys", async () => {
-    const key1 = await wc.generateHmacKey(PASSWORD);
-    const key2 = await wc.generateHmacKey(PASSWORD);
+  test("generateHmacKey() with same password produces consistent keys and verifies HMAC tags across instances", async () => {
+    const wc1 = new WebCrypt();
+    const wc2 = new WebCrypt();
 
-    // Keys should be valid and have the same properties for same password
-    expect(key1).toBeDefined();
-    expect(key2).toBeDefined();
-    expect(key1.type).toBe("secret");
-    expect(key2.type).toBe("secret");
+    const key1 = await wc1.generateHmacKey(PASSWORD);
+    const key2 = await wc2.generateHmacKey(PASSWORD);
+
+    const data = "Cross-instance authentication payload";
+    const tag1 = await wc1.computeHmac(data, key1);
+
+    // Key derived from same password in separate instance must verify tag
+    const isValid = await wc2.verifyHmac(data, tag1, key2);
+    expect(isValid).toBe(true);
+  });
+
+  test("generateHmacKey() supports custom salts", async () => {
+    const customSalt = "my-custom-salt-123";
+    const keyA = await wc.generateHmacKey(PASSWORD, "SHA-256", customSalt);
+    const keyB = await wc.generateHmacKey(PASSWORD, "SHA-256", customSalt);
+
+    const tagA = await wc.computeHmac("salt test", keyA);
+    const isValid = await wc.verifyHmac("salt test", tagA, keyB);
+    expect(isValid).toBe(true);
   });
 });
