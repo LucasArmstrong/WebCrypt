@@ -1,5 +1,5 @@
 // src/WebCrypt.js
-// version: 0.6.0
+// version: 0.6.1
 
 /**
  * WebCrypt — Password-based symmetric encryption using AES-256-GCM.

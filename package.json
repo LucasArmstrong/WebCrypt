@@ -1,6 +1,6 @@
 {
   "name": "webcrypt",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Zero-dependency JavaScript-based AES-256-GCM encryption for text, files & WebRTC E2EE. Includes symmetric (password) and asymmetric (RSA-4096 hybrid) modes. Streaming, quantum-resistant key derivation, pure Web Crypto API.",
   "type": "module",
   "files": [
@@ -117,9 +117,14 @@
     "arrowParens": "avoid"
   },
   "devDependencies": {
-    "jest": "^30.2.0",
+    "jest": "^30.4.2",
     "prettier": "^3.7.4",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.8",
+    "minimatch": "10.2.6",
+    "glob": "^10.5.0"
   }
 }

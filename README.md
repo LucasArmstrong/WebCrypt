@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/webcrypt)](https://www.npmjs.com/package/webcrypt)
 [![license](https://img.shields.io/npm/l/webcrypt)](./LICENSE)
-[![tests](https://img.shields.io/badge/tests-123%20passed-brightgreen)](./__tests__)
+[![tests](https://img.shields.io/badge/tests-131%20passed-brightgreen)](./__tests__)
 
 AES-256-GCM symmetric encryption, RSA-4096 hybrid asymmetric encryption, ECDH key exchange, digital signatures, HMAC, and streaming file encryption — all powered by the native Web Crypto API with zero runtime dependencies.
 
@@ -452,7 +452,7 @@ See [docs/PQC.md](./docs/PQC.md) for the full API reference.
 | Signatures            | ECDSA       | ⚠️ Vulnerable to Shor's algorithm                  |
 | PQC (Kyber/Dilithium) | Stubs       | ❌ Not real PQC yet                                |
 
-### Security hardening (v0.6.0)
+### Security hardening (v0.6.1)
 
 - PBKDF2 iterations: **600,000** (OWASP 2025+ compliant)
 - Unique **128-bit salt** per message/file
