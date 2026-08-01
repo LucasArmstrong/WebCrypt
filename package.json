@@ -1,6 +1,6 @@
 {
   "name": "webcrypt",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "Zero-dependency JavaScript AES-256-GCM encryption suite for text, files & WebRTC E2EE. Supports symmetric password derivation, RSA-4096 hybrid encryption, and post-quantum cryptography via pure Web Crypto API.",
   "license": "MIT",
   "author": "PuterVision LLC",

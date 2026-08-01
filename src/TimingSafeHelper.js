@@ -1,3 +1,4 @@
+// version: 0.6.5
 /**
  * WebCrypt Security Helper - Timing Attack Protection
  * Provides constant-time comparison and dummy operations to prevent timing oracle attacks

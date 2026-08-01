@@ -354,12 +354,13 @@ wc.createEncryptTransform(password: string): Promise<TransformFunction>
 wc.createDecryptTransform(password: string): Promise<TransformFunction>
 
 // HMAC
-wc.generateHmacKey(password?: string, hash?: string): Promise<CryptoKey>
+wc.generateHmacSalt(length?: number): Uint8Array
+wc.generateHmacKey(password?: string, hash?: string, salt?: Uint8Array | string): Promise<CryptoKey>
 wc.computeHmac(data: string | ArrayBuffer, key: CryptoKey): Promise<string>
 wc.verifyHmac(data: string | ArrayBuffer, hmac: string, key: CryptoKey): Promise<boolean>
 
 // HMAC-SHA3
-wc.generateHmacKeySHA3(password?: string, hash?: string): Promise<CryptoKey>
+wc.generateHmacKeySHA3(password?: string, hash?: string, salt?: Uint8Array | string): Promise<CryptoKey>
 wc.computeHmacSHA3(data: string | ArrayBuffer, key: CryptoKey): Promise<string>
 wc.verifyHmacSHA3(data: string | ArrayBuffer, hmac: string, key: CryptoKey): Promise<boolean>
 
@@ -375,7 +376,7 @@ wc.stopAutoCleanup(): void
 const crypt = new WebCryptAsym();
 
 // Key management
-crypt.generateKeyPair(): Promise<CryptoKeyPair>
+crypt.generateKeyPair(modulusLength?: number): Promise<CryptoKeyPair>
 crypt.exportPublicKey(key: CryptoKey): Promise<string>
 crypt.exportPrivateKey(key: CryptoKey): Promise<string>
 crypt.importPublicKey(b64: string): Promise<CryptoKey>
@@ -397,40 +398,53 @@ crypt.decryptFileWithProgress(file, privateKey, onProgress?): Promise<{ blob, fi
 
 // ECDH key exchange
 crypt.generateECDHKeyPair(curve?: string): Promise<{ publicKey, privateKey, publicKeyB64 }>
+crypt.exportECDHPublicKey(key: CryptoKey): Promise<string>
 crypt.importECDHPublicKey(b64: string, curve?: string): Promise<CryptoKey>
+crypt.deriveECDHSharedSecret(privateKey: CryptoKey, peerPublicKey: CryptoKey): Promise<CryptoKey>
 crypt.encryptWithECDH(data: any, privateKey, recipientPublicKey): Promise<string>
 crypt.decryptWithECDH(b64: string, privateKey, senderPublicKey): Promise<any>
 
-// Signing (ECDSA)
+// Digital Signatures (ECDSA / RSA-PSS)
 crypt.generateSigningKeyPair(curve?: string): Promise<{ publicKey, privateKey, publicKeyB64 }>
+crypt.generateEdDSASigningKeyPair(): Promise<{ publicKey, privateKey, publicKeyB64 }>
+crypt.generateRSAPSSigningKeyPair(modulusLength?: number): Promise<{ publicKey, privateKey, publicKeyB64 }>
+crypt.importPublicSigningKey(b64: string, curve?: string): Promise<CryptoKey>
 crypt.signText(text: string, privateKey: CryptoKey): Promise<string>
 crypt.verifyText(text: string, sig: string, publicKey: CryptoKey): Promise<boolean>
 crypt.signFile(file: File | Blob, privateKey: CryptoKey): Promise<{ signatureB64, blob }>
 crypt.verifyFile(file: File | Blob, sig: string, publicKey: CryptoKey): Promise<boolean>
-
-// Additional signing algorithms
 crypt.signTextWithAlgorithm(text, privateKey, algorithm?: 'ECDSA' | 'RSA-PSS'): Promise<string>
-crypt.verifyTextWithAlgorithm(text, sig, publicKey, algorithm?): Promise<boolean>
+crypt.verifyTextWithAlgorithm(text, sig, publicKey, algorithm?: 'ECDSA' | 'RSA-PSS'): Promise<boolean>
 
-// JWE
+// JWE (JSON Web Encryption)
 crypt.encryptJWE(payload: any, publicKey: CryptoKey, headers?: object): Promise<string>
 crypt.decryptJWE(jweToken: string, privateKey: CryptoKey): Promise<any>
 
-// MAC
+// MAC & Poly1305
 crypt.signHMAC(data: string, key: CryptoKey, hash?: string): Promise<string>
 crypt.verifyHMAC(data: string, sig: string, key: CryptoKey, hash?: string): Promise<boolean>
+crypt.authenticatePoly1305(data: string | Uint8Array, key: Uint8Array): Promise<string>
 
-// Key derivation
-crypt.deriveKeyPBKDF2(password, salt, iterations?): Promise<CryptoKey>
+// Key derivation & rotation
+crypt.deriveKeyPBKDF2(password, salt, iterations?, hash?, keyLength?): Promise<CryptoKey>
+crypt.deriveKeyArgon2(password, salt, options?): Promise<CryptoKey>
 crypt.deriveKeySHA3(password, iterations?, algorithm?): Promise<CryptoKey>
+crypt.deriveKeyHKDFSHA2(secret, salt?, info?, keyLength?): Promise<CryptoKey>
 crypt.deriveKeyHKDFSHA3(secret, salt?, info?, keyLength?): Promise<CryptoKey>
+crypt.generateKeyFromPassword(password, salt, algorithm?): Promise<CryptoKey>
+crypt.generateRotatingKey(password, salt, algorithm?, rotationCount?): Promise<CryptoKey>
+crypt.generateHierarchicalKey(masterPassword, path: string[]): Promise<{ masterKey, childKeys }>
+crypt.generateKeyFromMultipleInputs(inputs: string[], salt, algorithm?): Promise<CryptoKey>
 crypt.rotateKeyNew(password, newSalt, method?): Promise<CryptoKey>
 crypt.deriveChildKeyHierarchical(parentKey, childSalt, purpose?): Promise<CryptoKey>
+crypt.secureRandom(length: number): Promise<Uint8Array>
 crypt.secureKeyErase(key: Uint8Array): void
 
-// WebRTC
+// WebRTC Insertable Streams
 crypt.createEncryptTransform(publicKey: CryptoKey): Promise<TransformFunction>
 crypt.createDecryptTransform(privateKey: CryptoKey): Promise<TransformFunction>
+crypt.createHybridEncryptTransform(publicKey, kyberPublicKey, level?): Promise<TransformFunction>
+crypt.createEncryptTransformWithProgress(publicKey, onProgress?): Promise<TransformFunction>
 ```
 
 ### WebCryptPQC (Post-Quantum)
@@ -452,7 +466,7 @@ See [docs/PQC.md](./docs/PQC.md) for the full API reference.
 | Signatures            | ECDSA       | ⚠️ Vulnerable to Shor's algorithm                  |
 | PQC (Kyber/Dilithium) | Stubs       | ❌ Not real PQC yet                                |
 
-### Security hardening (v0.6.4)
+### Security hardening (v0.6.5)
 
 - **PBKDF2 Iterations**: **600,000** (OWASP 2025+ compliant).
 - **Non-Exportable HMAC Keys**: Generated HMAC keys pass `extractable: false` to `crypto.subtle.importKey` preventing secret key extraction while allowing full signing and verification.

@@ -154,7 +154,7 @@ pqc.dilithiumPrivateKeyFromBase64(b64: string): Uint8Array
 ## Migration Path
 
 ```
-v0.6.x (Current): Placeholder stubs → Integrate liboqs-js manually
+v0.6.5 (Current): Placeholder stubs → Integrate liboqs-js manually
 v0.7+ (Future):   Official liboqs-js integration → Production-ready PQC
 2030+:            Pure lattice-based cryptography → Full quantum resistance
 ```

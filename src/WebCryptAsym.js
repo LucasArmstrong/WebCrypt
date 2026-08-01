@@ -1,5 +1,5 @@
 // src/WebCryptAsym.js
-// version: 0.6.4
+// version: 0.6.5
 import TimingSafeHelper from "./TimingSafeHelper.js"; // Add timing-safe helper for DoS protection and constant-time comparisons
 
 /**
@@ -60,7 +60,10 @@ export class WebCryptAsym {
   static ED25519_ALGORITHM = "EdDSA";
   static ED25519_CURVE = "Ed25519";
 
-  // Fixed salt for WebRTC key derivation: Ensures consistent session keys without explicit signaling
+  /**
+   * Fixed salt for WebRTC key derivation.
+   * @warning For production applications, pass a custom salt per session.
+   */
   static WEBRTC_SALT = new TextEncoder().encode("WebCryptAsym-E2EE-v1-2025");
 
   // Key Derivation Function constants

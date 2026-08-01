@@ -1,5 +1,5 @@
 // src/WebCrypt.js
-// version: 0.6.4
+// version: 0.6.5
 
 /**
  * WebCrypt — Password-based symmetric encryption using AES-256-GCM.
@@ -37,8 +37,15 @@ export class WebCrypt {
   // Optimized for large files: 8MB chunks balance speed and memory (prevents OOM on 10GB+ files)
   static CHUNK_SIZE = 8 * 1024 * 1024;
   // WEBRTC_SALT: Fixed salt for WebRTC key derivation; ensures consistent keys between peers without transmission
+  /**
+   * Default static salt for WebRTC transform convenience.
+   * @warning For production applications, pass a custom salt per session.
+   */
   static WEBRTC_SALT = new TextEncoder().encode("WebCrypt-E2EE-v1-2025");
-  // DEFAULT_HMAC_SALT: Default static salt for deterministic password-derived HMAC key derivation
+  /**
+   * Default static salt for deterministic password-derived HMAC key derivation.
+   * @warning For production security, generate custom salts with WebCrypt.generateHmacSalt().
+   */
   static DEFAULT_HMAC_SALT = new TextEncoder().encode("WebCrypt-HMAC-DefaultSalt-v0.6");
 
   /**

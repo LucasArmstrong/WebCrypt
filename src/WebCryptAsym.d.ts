@@ -560,75 +560,42 @@ declare class WebCryptAsym {
   decryptData(b64: string, privateKey: CryptoKey): Promise<any>;
 
   /**
-   * Sign a text message with a configurable algorithm
+   * Import a public signing key from base64 (SPKI format)
+   * @param publicKeyB64 - Base64 encoded SPKI public key
+   * @param curve - Elliptic curve ('P-256' default, 'P-384')
+   */
+  importPublicSigningKey(publicKeyB64: string, curve?: string): Promise<CryptoKey>;
+
+  /**
+   * Sign a text message or data string with ECDSA
    * @param text - Text to sign
-   * @param privateKey - Private key for signing
-   * @param algorithm - Signature algorithm: 'ECDSA' (default), 'RSA-PSS'
+   * @param privateKey - ECDSA private key
+   * @returns Base64-encoded detached signature
    */
-  signTextWithAlgorithm(
-    text: string,
-    privateKey: CryptoKey,
-    algorithm?: "ECDSA" | "RSA-PSS"
-  ): Promise<string>;
+  signText(text: string, privateKey: CryptoKey): Promise<string>;
 
   /**
-   * Verify a signed text message with a configurable algorithm
+   * Verify a signed text message with ECDSA
    * @param text - Text that was signed
-   * @param signatureB64 - Base64-encoded signature
-   * @param publicKey - Public key for verification
-   * @param algorithm - Signature algorithm: 'ECDSA' (default), 'RSA-PSS'
+   * @param signatureB64 - Base64 signature
+   * @param publicKey - ECDSA public key
    */
-  verifyTextWithAlgorithm(
-    text: string,
-    signatureB64: string,
-    publicKey: CryptoKey,
-    algorithm?: "ECDSA" | "RSA-PSS"
-  ): Promise<boolean>;
+  verifyText(text: string, signatureB64: string, publicKey: CryptoKey): Promise<boolean>;
 
   /**
-   * Generate a key with key rotation support
-   * @param password - Password to derive the key from
-   * @param salt - Salt for key derivation
-   * @param algorithm - Key derivation algorithm
-   * @param rotationCount - Rotation counter
+   * Create a detached signature for a file or blob
+   * @param fileOrBlob - File or Blob object to sign
+   * @param privateKey - ECDSA private key
    */
-  generateRotatingKey(
-    password: string,
-    salt: Uint8Array,
-    algorithm?: "PBKDF2" | "Argon2",
-    rotationCount?: number
-  ): Promise<CryptoKey>;
+  signFile(fileOrBlob: any, privateKey: CryptoKey): Promise<{ signatureB64: string; blob: any }>;
 
   /**
-   * Generate a hierarchical key structure from a master password
-   * @param masterPassword - Master password
-   * @param path - Path components for child keys
+   * Verify a detached signature for a file or blob
+   * @param fileOrBlob - File or Blob object that was signed
+   * @param signatureB64 - Base64 signature
+   * @param publicKey - ECDSA public key
    */
-  generateHierarchicalKey(
-    masterPassword: string,
-    path: string[]
-  ): Promise<{
-    masterKey: CryptoKey;
-    childKeys: { [key: string]: CryptoKey };
-  }>;
-
-  /**
-   * Generate a key from multiple combined inputs
-   * @param inputs - Array of input strings to combine
-   * @param salt - Salt for key derivation
-   * @param algorithm - Key derivation algorithm
-   */
-  generateKeyFromMultipleInputs(
-    inputs: string[],
-    salt: Uint8Array,
-    algorithm?: "PBKDF2" | "Argon2"
-  ): Promise<CryptoKey>;
-
-  /**
-   * Secure random number generation
-   * @param length - Number of bytes to generate
-   */
-  secureRandom(length: number): Promise<Uint8Array>;
+  verifyFile(fileOrBlob: any, signatureB64: string, publicKey: CryptoKey): Promise<boolean>;
 
   // ────────────────────── JSON Web Encryption (JWE) ──────────────────────
 

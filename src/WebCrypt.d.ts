@@ -12,6 +12,21 @@
  * Works in Browser, Node.js 18+, Deno, Cloudflare Workers
  */
 declare class WebCrypt {
+  static readonly ALGORITHM: "AES-GCM";
+  static readonly KEY_LENGTH: 256;
+  static readonly IV_LENGTH: 12;
+  static readonly SALT_LENGTH: 16;
+  static readonly PBKDF2_ITERATIONS: number;
+  static readonly HASH_ALGORITHM: "SHA-256";
+  static readonly CHUNK_SIZE: number;
+  static readonly WEBRTC_SALT: Uint8Array;
+  static readonly DEFAULT_HMAC_SALT: Uint8Array;
+
+  /**
+   * Generates a cryptographically secure random salt for HMAC key derivation.
+   * @param length Salt length in bytes (default: 16)
+   */
+  static generateHmacSalt(length?: number): Uint8Array;
   /**
    * Encrypts a string and returns Base64-encoded ciphertext
    * @param text Plain text to encrypt

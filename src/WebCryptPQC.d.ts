@@ -65,7 +65,16 @@ declare class WebCryptPQC {
   /**
    * Supported Dilithium levels
    */
-  static readonly SUPPORTED_DILITHIUM_LEVELS: string[];
+  /**
+   * Returns true if PQC module is running as a placeholder/stub.
+   */
+  static isStub(): boolean;
+
+  /**
+   * Enable or disable stub testing mode for unit tests.
+   * @param allow Enable stub testing mode if true
+   */
+  static enableStubTesting(allow?: boolean): void;
 
   constructor();
 

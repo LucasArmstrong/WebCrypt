@@ -2,10 +2,10 @@
 
 ## Supported Versions
 
-| Version | Supported               |
-| ------- | ----------------------- |
-| 0.6.x   | ✅ Active support       |
-| < 0.6   | ❌ Legacy / unsupported |
+| Version         | Supported               |
+| --------------- | ----------------------- |
+| 0.6.5 (Current) | ✅ Active support       |
+| < 0.6.5         | ❌ Legacy / unsupported |
 
 ## Reporting a Vulnerability
 
