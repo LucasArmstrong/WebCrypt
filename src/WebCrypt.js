@@ -135,10 +135,10 @@ export class WebCrypt {
         if (webcrypto && webcrypto.subtle) return webcrypto;
       } catch (e) {}
     }
-    if (typeof globalThis !== "undefined" && globalThis.crypto) {
+    if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.subtle) {
       return globalThis.crypto;
     }
-    throw new Error("Web Crypto API not available in this environment");
+    throw new Error("Web Crypto API (crypto.subtle) is not available in this environment");
   }
 
   // Derives AES key using PBKDF2: High iterations ensure quantum-resistant key stretching

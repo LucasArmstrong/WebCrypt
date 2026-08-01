@@ -161,10 +161,10 @@ export class WebCryptPQC {
         if (webcrypto && webcrypto.subtle) return webcrypto;
       } catch (e) {}
     }
-    if (typeof globalThis !== "undefined" && globalThis.crypto) {
+    if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.subtle) {
       return globalThis.crypto;
     }
-    throw new Error("Web Crypto API not available");
+    throw new Error("Web Crypto API (crypto.subtle) is not available in this environment");
   }
 
   // ═══════════════════════════ Kyber KEM (Key Encapsulation) ═══════════════════════════
