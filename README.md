@@ -452,7 +452,7 @@ See [docs/PQC.md](./docs/PQC.md) for the full API reference.
 | Signatures            | ECDSA       | ⚠️ Vulnerable to Shor's algorithm                  |
 | PQC (Kyber/Dilithium) | Stubs       | ❌ Not real PQC yet                                |
 
-### Security hardening (v0.6.2)
+### Security hardening (v0.6.3)
 
 - **PBKDF2 Iterations**: **600,000** (OWASP 2025+ compliant).
 - **Non-Exportable HMAC Keys**: Generated HMAC keys pass `extractable: false` to `crypto.subtle.importKey` preventing secret key extraction while allowing full signing and verification.

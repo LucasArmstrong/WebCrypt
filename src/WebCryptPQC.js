@@ -1,6 +1,6 @@
 // src/WebCryptPQC.js
 // Post-Quantum Cryptography (PQC) module - provides NIST-selected algorithms
-// version: 0.6.2 - Quantum-resist core
+// version: 0.6.3 - Quantum-resist core
 
 /**
  * WebCryptPQC – Post-quantum key exchange and digital signatures
@@ -152,10 +152,17 @@ export class WebCryptPQC {
   }
 
   _getCrypto() {
-    if (typeof globalThis !== "undefined" && globalThis.crypto) return globalThis.crypto;
+    if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.subtle) {
+      return globalThis.crypto;
+    }
     if (typeof require !== "undefined") {
-      const { webcrypto } = require("crypto");
-      return webcrypto;
+      try {
+        const { webcrypto } = require("node:crypto");
+        if (webcrypto && webcrypto.subtle) return webcrypto;
+      } catch (e) {}
+    }
+    if (typeof globalThis !== "undefined" && globalThis.crypto) {
+      return globalThis.crypto;
     }
     throw new Error("Web Crypto API not available");
   }

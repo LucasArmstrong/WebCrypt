@@ -1,5 +1,5 @@
 // src/WebCryptAsym.js
-// version: 0.6.2
+// version: 0.6.3
 import TimingSafeHelper from "./TimingSafeHelper.js"; // Add timing-safe helper for DoS protection and constant-time comparisons
 
 /**
@@ -73,12 +73,17 @@ export class WebCryptAsym {
   }
 
   _getCrypto() {
-    // Browser environment
-    if (typeof globalThis !== "undefined" && globalThis.crypto) return globalThis.crypto;
-    // Node.js 18+ (native Web Crypto API)
+    if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.subtle) {
+      return globalThis.crypto;
+    }
     if (typeof require !== "undefined") {
-      const { webcrypto } = require("crypto");
-      return webcrypto;
+      try {
+        const { webcrypto } = require("node:crypto");
+        if (webcrypto && webcrypto.subtle) return webcrypto;
+      } catch (e) {}
+    }
+    if (typeof globalThis !== "undefined" && globalThis.crypto) {
+      return globalThis.crypto;
     }
     throw new Error("Web Crypto API not available");
   }

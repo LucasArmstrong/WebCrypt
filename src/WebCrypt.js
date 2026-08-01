@@ -1,5 +1,5 @@
 // src/WebCrypt.js
-// version: 0.6.2
+// version: 0.6.3
 
 /**
  * WebCrypt — Password-based symmetric encryption using AES-256-GCM.
@@ -126,12 +126,17 @@ export class WebCrypt {
   }
 
   _getCrypto() {
-    // Browser (Chrome, Firefox, Safari, Edge)
-    if (typeof globalThis !== "undefined" && globalThis.crypto) return globalThis.crypto;
-    // Node.js 18+ has native Web Crypto
+    if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.subtle) {
+      return globalThis.crypto;
+    }
     if (typeof require !== "undefined") {
-      const { webcrypto } = require("crypto");
-      return webcrypto;
+      try {
+        const { webcrypto } = require("node:crypto");
+        if (webcrypto && webcrypto.subtle) return webcrypto;
+      } catch (e) {}
+    }
+    if (typeof globalThis !== "undefined" && globalThis.crypto) {
+      return globalThis.crypto;
     }
     throw new Error("Web Crypto API not available in this environment");
   }
@@ -446,6 +451,7 @@ export class WebCrypt {
    * @returns {Promise<CryptoKey>} Usable HMAC key.
    */
   async generateHmacKey(password, hash = "SHA-256", customSalt = null) {
+    const crypto = this._getCrypto();
     let keyMaterial;
 
     if (password) {
@@ -490,6 +496,7 @@ export class WebCrypt {
    * @returns {Promise<string>} Base64-encoded HMAC tag.
    */
   async computeHmac(data, key) {
+    const crypto = this._getCrypto();
     const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
     const signature = await crypto.subtle.sign("HMAC", key, dataBuffer);
     return this._arrayBufferToBase64(signature);
@@ -503,6 +510,7 @@ export class WebCrypt {
    * @returns {Promise<boolean>} True if valid.
    */
   async verifyHmac(data, hmac, key) {
+    const crypto = this._getCrypto();
     const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
     const signatureBuffer = new Uint8Array(this._base64ToArrayBuffer(hmac));
     return crypto.subtle.verify("HMAC", key, signatureBuffer, dataBuffer);
@@ -518,6 +526,7 @@ export class WebCrypt {
    * @returns {Promise<CryptoKey>} Usable HMAC key with SHA-3
    */
   async generateHmacKeySHA3(password, hash = "SHA3-256", customSalt = null) {
+    const crypto = this._getCrypto();
     let keyMaterial;
 
     if (password) {
@@ -568,6 +577,7 @@ export class WebCrypt {
    * @returns {Promise<string>} Base64-encoded HMAC tag
    */
   async computeHmacSHA3(data, key) {
+    const crypto = this._getCrypto();
     const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
     const signature = await crypto.subtle.sign("HMAC", key, dataBuffer);
     return btoa(String.fromCharCode(...new Uint8Array(signature)));
@@ -581,6 +591,7 @@ export class WebCrypt {
    * @returns {Promise<boolean>} True if valid
    */
   async verifyHmacSHA3(data, hmac, key) {
+    const crypto = this._getCrypto();
     const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
     const signatureBuffer = Uint8Array.from(atob(hmac), c => c.charCodeAt(0));
     return crypto.subtle.verify("HMAC", key, signatureBuffer, dataBuffer);

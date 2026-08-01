@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2026-08-01
+
+### Node 18+ Compatibility & UI Responsiveness
+
+- **Node 18+ WebCrypto Fix**: Explicitly populated `const crypto = this._getCrypto()` across all HMAC methods in `src/WebCrypt.js` (`generateHmacKey`, `computeHmac`, `verifyHmac`, `generateHmacKeySHA3`, `computeHmacSHA3`, `verifyHmacSHA3`), resolving `ReferenceError: crypto is not defined` in Node 18 environments.
+- **Jest Runner Setup**: Updated `jest.setup.js` to safely define `globalThis.crypto` using `Object.defineProperty` for read-only getter environments.
+- **Responsive Segmented Tab Bar**: Redesigned tool tab navigation in `docs/index.html` and `docs/style.css` into a modern segmented pill container with clean mobile flex-wrapping and no native horizontal scrollbars.
+- **Hero Wording Update**: Streamlined hero description text on `docs/index.html`.
+- **System-Wide Version Bump**: Synchronized version `0.6.3` across `package.json`, `package-lock.json`, source files (`WebCrypt.js`, `WebCryptAsym.js`, `WebCryptPQC.js`), documentation, web site, and unit tests.
+
 ## [0.6.2] - 2026-08-01
 
 ### Audit, Planning & System-Wide Version Bump
