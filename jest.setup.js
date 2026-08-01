@@ -1,4 +1,3 @@
-// jest.setup.js
 import { TextEncoder, TextDecoder } from "node:util";
 import { webcrypto } from "node:crypto";
 import { Blob, File } from "node:buffer";
@@ -14,6 +13,10 @@ try {
   });
 } catch (e) {
   globalThis.crypto = webcrypto;
+}
+
+if (!globalThis.CryptoKey && webcrypto && webcrypto.CryptoKey) {
+  globalThis.CryptoKey = webcrypto.CryptoKey;
 }
 
 if (!globalThis.Blob) globalThis.Blob = Blob;

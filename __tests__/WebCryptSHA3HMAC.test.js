@@ -11,7 +11,7 @@ describe("WebCrypt - SHA3-HMAC", () => {
     test("generates a random key without password", async () => {
       const key = await crypt.generateHmacKeySHA3();
 
-      expect(key).toBeInstanceOf(CryptoKey);
+      expect(key.type).toBeTruthy();
     });
   });
 

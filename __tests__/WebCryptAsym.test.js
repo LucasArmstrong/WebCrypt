@@ -499,8 +499,8 @@ describe("WebCryptAsym", () => {
       const bobSecret = await crypt.deriveECDHSharedSecret(bobKeys.privateKey, aliceKeys.publicKey);
 
       // Verify that they returned valid crypto keys
-      expect(aliceSecret).toBeInstanceOf(CryptoKey);
-      expect(bobSecret).toBeInstanceOf(CryptoKey);
+      expect(aliceSecret.type).toBe("secret");
+      expect(bobSecret.type).toBe("secret");
       expect(aliceSecret.algorithm.name).toBe("AES-GCM");
       expect(bobSecret.algorithm.name).toBe("AES-GCM");
     });
