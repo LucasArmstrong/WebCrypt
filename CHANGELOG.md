@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2026-08-01
+
+### Comprehensive Test Coverage Expansion (95%+)
+
+- **95%+ Test Coverage**: Added comprehensive test suites covering all re-exports (`src/index.js`), timing-safe key verification KDF, stream encryption/decryption, LRU key cache eviction, digital signatures (ECDSA P-256, P-384, RSA-PSS), PEM/JWK key import & export, JWE compact format (RFC 7516), ECDH key agreement, and PQC stub error traps.
+- **Strict Coverage Thresholds**: Updated `jest.config.js` global coverage thresholds to `branches: 90%, functions: 95%, lines: 95%, statements: 95%`.
+- **System-Wide Version Bump**: Synchronized version `0.6.4` across `package.json`, `package-lock.json`, source files (`WebCrypt.js`, `WebCryptAsym.js`, `WebCryptPQC.js`), documentation, web site, and unit tests.
+
 ## [0.6.3] - 2026-08-01
 
 ### Node 18+ Compatibility & UI Responsiveness

@@ -1,6 +1,6 @@
 // src/WebCryptPQC.js
 // Post-Quantum Cryptography (PQC) module - provides NIST-selected algorithms
-// version: 0.6.3 - Quantum-resist core
+// version: 0.6.4 - Quantum-resist core
 
 /**
  * WebCryptPQC – Post-quantum key exchange and digital signatures

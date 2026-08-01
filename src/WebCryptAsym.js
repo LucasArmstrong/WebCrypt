@@ -1,5 +1,5 @@
 // src/WebCryptAsym.js
-// version: 0.6.3
+// version: 0.6.4
 import TimingSafeHelper from "./TimingSafeHelper.js"; // Add timing-safe helper for DoS protection and constant-time comparisons
 
 /**

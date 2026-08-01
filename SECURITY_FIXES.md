@@ -1,10 +1,10 @@
-# Security Fixes — WebCrypt v0.6.3 & v0.5.3
+# Security Fixes — WebCrypt v0.6.4 & v0.5.3
 
-This document details all security hardening changes introduced in v0.6.3 and prior releases.
+This document details all security hardening changes introduced in v0.6.4 and prior releases.
 
 ---
 
-## WebCrypt v0.6.3 Audit Fixes
+## WebCrypt v0.6.4 Audit Fixes
 
 ### 1. Non-Exportable HMAC Key Enforcement
 
