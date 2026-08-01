@@ -1,6 +1,6 @@
 // src/WebCryptPQC.js
 // Post-Quantum Cryptography (PQC) module - provides NIST-selected algorithms
-// version: 0.6.1 - Quantum-resist core
+// version: 0.6.2 - Quantum-resist core
 
 /**
  * WebCryptPQC – Post-quantum key exchange and digital signatures
@@ -34,6 +34,35 @@ export class WebCryptPQC {
     "⚠️ CRITICAL: WebCryptPQC is PLACEHOLDER/STUB implementation. " +
     "Kyber and Dilithium are NOT real PQC - they use SHA-3 hashing stubs. " +
     "Not suitable for production security. Integrate liboqs-js or wait for official implementation.";
+
+  static _STUB_MODE = true;
+
+  /**
+   * Programmatically check if PQC module is running in stub mode.
+   * @returns {boolean} True if PQC module is a placeholder stub.
+   */
+  static isStub() {
+    return WebCryptPQC._STUB_MODE;
+  }
+
+  /**
+   * Enable or disable stub testing mode.
+   * @param {boolean} [allow=true] If true, allows stub operations for testing purposes.
+   */
+  static enableStubTesting(allow = true) {
+    WebCryptPQC._STUB_MODE = !allow;
+  }
+
+  /**
+   * Internal helper to verify stub mode state before PQC operations.
+   */
+  _checkStubMode() {
+    if (WebCryptPQC._STUB_MODE) {
+      throw new Error(
+        "WebCryptPQC is a placeholder stub — not for production use. Call WebCryptPQC.enableStubTesting(true) for testing."
+      );
+    }
+  }
 
   // ─────────────────────── Kyber Constants ───────────────────────
   static KYBER_512 = "Kyber512";
@@ -139,6 +168,7 @@ export class WebCryptPQC {
    * @returns {Promise<{publicKey: Uint8Array, privateKey: Uint8Array}>}
    */
   async generateKyberKeyPair(level = WebCryptPQC.KYBER_768) {
+    this._checkStubMode();
     if (!WebCryptPQC.SUPPORTED_KYBER_LEVELS.includes(level)) {
       throw new Error(`Unsupported Kyber level: ${level}. Use Kyber512, Kyber768, or Kyber1024`);
     }
@@ -158,6 +188,7 @@ export class WebCryptPQC {
    * @returns {Promise<{ciphertext: Uint8Array, sharedSecret: Uint8Array}>}
    */
   async kyberEncapsulate(kyberPublicKey, level = WebCryptPQC.KYBER_768) {
+    this._checkStubMode();
     if (!WebCryptPQC.SUPPORTED_KYBER_LEVELS.includes(level)) {
       throw new Error(`Unsupported Kyber level: ${level}`);
     }
@@ -192,6 +223,7 @@ export class WebCryptPQC {
    * @returns {Promise<Uint8Array>} The shared secret
    */
   async kyberDecapsulate(ciphertext, kyberPrivateKey, level = WebCryptPQC.KYBER_768) {
+    this._checkStubMode();
     if (!WebCryptPQC.SUPPORTED_KYBER_LEVELS.includes(level)) {
       throw new Error(`Unsupported Kyber level: ${level}`);
     }
@@ -226,6 +258,7 @@ export class WebCryptPQC {
    * @returns {Promise<{publicKey: Uint8Array, privateKey: Uint8Array}>}
    */
   async generateDilithiumKeyPair(level = WebCryptPQC.DILITHIUM_3) {
+    this._checkStubMode();
     if (!WebCryptPQC.SUPPORTED_DILITHIUM_LEVELS.includes(level)) {
       throw new Error(`Unsupported Dilithium level: ${level}`);
     }
@@ -245,6 +278,7 @@ export class WebCryptPQC {
    * @returns {Promise<Uint8Array>} Digital signature
    */
   async dilithiumSign(message, dilithiumPrivateKey, level = WebCryptPQC.DILITHIUM_3) {
+    this._checkStubMode();
     if (!WebCryptPQC.SUPPORTED_DILITHIUM_LEVELS.includes(level)) {
       throw new Error(`Unsupported Dilithium level: ${level}`);
     }
@@ -284,6 +318,7 @@ export class WebCryptPQC {
    * @returns {Promise<boolean>} True if format is valid (NOT cryptographic verification!)
    */
   async dilithiumVerify(message, signature, dilithiumPublicKey, level = WebCryptPQC.DILITHIUM_3) {
+    this._checkStubMode();
     if (!WebCryptPQC.SUPPORTED_DILITHIUM_LEVELS.includes(level)) {
       throw new Error(`Unsupported Dilithium level: ${level}`);
     }
@@ -431,6 +466,11 @@ export class WebCryptPQC {
       // Fallback: Use SHA-256/512 (still quantum-resistant for these sizes)
       const fallbackAlgorithm =
         bitLength <= 256 ? "SHA-256" : bitLength <= 384 ? "SHA-384" : "SHA-512";
+      if (typeof console !== "undefined" && console.warn) {
+        console.warn(
+          `SHA3-${bitLength} not natively supported by Web Crypto, falling back to ${fallbackAlgorithm}`
+        );
+      }
       const digest = await this._crypto.subtle.digest(fallbackAlgorithm, data);
       return new Uint8Array(digest).slice(0, bitLength / 8);
     }
@@ -529,7 +569,7 @@ export class WebCryptPQC {
   // Chunked block conversion avoids stack overflow and O(N^2) memory churn
   _arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
-    const CHUNK_SIZE = 0x8000; // 32KB chunks
+    const CHUNK_SIZE = 1024; // 1KB chunks eliminate stack overflow risks across all JS engines
     let binary = "";
     for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
       binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
@@ -538,7 +578,12 @@ export class WebCryptPQC {
   }
 
   _base64ToArrayBuffer(base64) {
-    const binary = atob(base64);
+    let padded = base64;
+    const mod = base64.length % 4;
+    if (mod > 0) {
+      padded += "=".repeat(4 - mod);
+    }
+    const binary = atob(padded);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {
       bytes[i] = binary.charCodeAt(i);

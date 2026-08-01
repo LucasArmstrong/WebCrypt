@@ -25,6 +25,7 @@
     </div>
     <nav aria-label="Main Navigation">
       <ul class="nav-links">
+        <li><a href="#tools">Live Tools</a></li>
         <li><a href="#features">Features</a></li>
         <li><a href="#quickstart">Quickstart</a></li>
         <li><a href="#security">Security & Legal</a></li>
@@ -45,14 +46,14 @@
   <main class="container">
     <!-- Hero Section -->
     <section class="hero">
-      <span class="badge">RELEASE v0.6.1 • ZERO DEPENDENCIES • PURE WEB CRYPTO API</span>
+      <span class="badge">RELEASE v0.6.2 • ZERO DEPENDENCIES • PURE WEB CRYPTO API</span>
       <h1>Zero-Dependency Web Cryptography Suite</h1>
-      <p>High-performance AES-256-GCM encryption for text, files, and WebRTC E2EE insertable streams. Maintained by <a href="https://putervision.com" target="_blank" rel="noopener noreferrer" style="color: var(--accent-cyan); text-decoration: underline;">PuterVision LLC</a> natively for browser and Node.js Web Crypto environments.</p>
+      <p>High-performance AES-256-GCM encryption for text, files, and WebRTC E2EE insertable streams. Built natively for browser and Node.js Web Crypto environments.</p>
       
       <div class="cta-group">
-        <a href="#quickstart" class="btn-primary">Get Started</a>
+        <a href="#tools" class="btn-primary">Try Live Tools</a>
+        <a href="#quickstart" class="btn-secondary">Code Quickstart</a>
         <a href="#features" class="btn-secondary">Explore Features</a>
-        <a href="#api" class="btn-secondary">API Reference</a>
       </div>
     </section>
 
@@ -92,6 +93,159 @@
         <div class="feature-icon">📁</div>
         <h3>File & Stream Chunks</h3>
         <p>Chunked file encryption with constant memory usage, streaming support, and automatic unref'd key caching.</p>
+      </div>
+    </section>
+
+    <!-- Live Cryptography Workbench Section -->
+    <section id="tools" class="card">
+      <div class="section-title">
+        <span class="badge">Interactive Browser Workbench</span>
+        <h2>Live Web Cryptography Tools</h2>
+      </div>
+
+      <nav class="tool-nav" aria-label="Cryptography Tools Navigation">
+        <button class="tool-tab-btn active" data-tab="tab-sym" id="tab-sym-btn">🔒 AES-256-GCM</button>
+        <button class="tool-tab-btn" data-tab="tab-asym" id="tab-asym-btn">🔑 RSA-4096 Hybrid</button>
+        <button class="tool-tab-btn" data-tab="tab-pass" id="tab-pass-btn">🎲 Key Generator</button>
+        <button class="tool-tab-btn" data-tab="tab-hmac" id="tab-hmac-btn">🛡️ HMAC Authentication</button>
+        <button class="tool-tab-btn" data-tab="tab-inspect" id="tab-inspect-btn">🧪 Environment Inspector</button>
+      </nav>
+
+      <!-- 1. Symmetric Tab -->
+      <div id="tab-sym" class="tool-tab-content active">
+        <div class="demo-grid">
+          <div>
+            <div class="form-group">
+              <label for="sym-input">Message Payload to Encrypt</label>
+              <textarea id="sym-input" class="form-control tool-textarea" placeholder="Enter confidential message or JSON data...">Confidential payload: The key to victory is zero dependencies.</textarea>
+            </div>
+            <div class="form-group">
+              <label for="sym-pass">Encryption Password</label>
+              <input type="password" id="sym-pass" class="form-control" value="PuterVisionWebCrypt2026!">
+            </div>
+            <div class="tool-btn-group">
+              <button id="btn-sym-encrypt" class="btn-primary" style="padding: 0.6rem 1.25rem; font-size: 0.9rem;">🔒 Encrypt Payload</button>
+              <button id="btn-sym-decrypt" class="btn-secondary" style="padding: 0.6rem 1.25rem; font-size: 0.9rem;">🔓 Decrypt Payload</button>
+            </div>
+          </div>
+          <div>
+            <div class="form-group flex-fill">
+              <label for="sym-output">Base64 Output (Salt + IV + AES-GCM Ciphertext)</label>
+              <textarea id="sym-output" class="form-control tool-textarea" readonly placeholder="Encrypted Base64 output will appear here..."></textarea>
+            </div>
+            <div id="sym-stats" class="stats-badge success">Ready for zero-dependency AES-256-GCM execution</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Asymmetric Tab -->
+      <div id="tab-asym" class="tool-tab-content">
+        <div style="margin-bottom: 1.25rem;" class="tool-btn-group">
+          <label style="font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 0.5rem;">
+            Modulus Size:
+            <select id="asym-modulus" class="form-control" style="width: auto; padding: 0.35rem 0.65rem;">
+              <option value="4096" selected>RSA-4096 (Maximum Security)</option>
+              <option value="2048">RSA-2048 (Fast)</option>
+            </select>
+          </label>
+          <button id="btn-asym-genkeys" class="btn-primary" style="padding: 0.5rem 1.2rem; font-size: 0.88rem;">⚡ Generate RSA Key Pair</button>
+        </div>
+
+        <div class="demo-grid" style="margin-bottom: 1rem;">
+          <div>
+            <label for="asym-pubkey" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-cyan); display: block; margin-bottom: 0.3rem;">Public Key (SPKI Base64)</label>
+            <textarea id="asym-pubkey" class="form-control tool-textarea" readonly style="min-height: 80px;" placeholder="Click 'Generate Key Pair' above..."></textarea>
+          </div>
+          <div>
+            <label for="asym-privkey" style="font-size: 0.85rem; font-weight: 600; color: var(--accent-indigo); display: block; margin-bottom: 0.3rem;">Private Key (PKCS8 Base64)</label>
+            <textarea id="asym-privkey" class="form-control tool-textarea" readonly style="min-height: 80px;" placeholder="Click 'Generate Key Pair' above..."></textarea>
+          </div>
+        </div>
+
+        <div class="demo-grid">
+          <div>
+            <div class="form-group">
+              <label for="asym-input">Secret Message</label>
+              <textarea id="asym-input" class="form-control tool-textarea" style="min-height: 70px;">Asymmetric Top Secret Briefing</textarea>
+            </div>
+            <div class="tool-btn-group">
+              <button id="btn-asym-encrypt" class="btn-primary" style="padding: 0.5rem 1.1rem; font-size: 0.88rem;">🔒 RSA Hybrid Encrypt</button>
+              <button id="btn-asym-decrypt" class="btn-secondary" style="padding: 0.5rem 1.1rem; font-size: 0.88rem;">🔓 RSA Hybrid Decrypt</button>
+            </div>
+          </div>
+          <div>
+            <div class="form-group flex-fill">
+              <label for="asym-output">Encrypted Payload</label>
+              <textarea id="asym-output" class="form-control tool-textarea" readonly style="min-height: 70px;" placeholder="Encrypted RSA hybrid payload..."></textarea>
+            </div>
+            <div id="asym-stats" class="stats-badge pending">Generate a key pair to begin asymmetric testing</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Password Generator Tab -->
+      <div id="tab-pass" class="tool-tab-content">
+        <div style="max-width: 650px; margin: 0 auto;">
+          <div class="form-group">
+            <label for="pass-len-slider">Secret Entropy Bytes: <span id="pass-len-val" style="color: var(--accent-cyan);">32 bytes</span></label>
+            <input type="range" id="pass-len-slider" min="16" max="128" value="32" style="width: 100%; accent-color: var(--accent-cyan);">
+          </div>
+          <div class="form-group">
+            <label for="pass-format">Encoding Output Format</label>
+            <select id="pass-format" class="form-control">
+              <option value="hex" selected>Hexadecimal String (64 chars = 256 bits)</option>
+              <option value="base64">Base64 Encoded String</option>
+              <option value="ascii">Printable ASCII Special Set</option>
+            </select>
+          </div>
+          <button id="btn-gen-pass" class="btn-primary" style="width: 100%; margin-bottom: 1rem;">🎲 Generate Cryptographic Key / Password</button>
+          <div class="form-group">
+            <label for="pass-output">Generated High-Entropy Key String</label>
+            <input type="text" id="pass-output" class="form-control" readonly style="font-family: 'Fira Code', monospace; color: var(--accent-cyan);" placeholder="Click Generate above...">
+          </div>
+          <div id="pass-entropy-badge" class="stats-badge success">256 Bits Cryptographic Entropy</div>
+        </div>
+      </div>
+
+      <!-- 4. HMAC Tab -->
+      <div id="tab-hmac" class="tool-tab-content">
+        <div class="demo-grid">
+          <div>
+            <div class="form-group">
+              <label for="hmac-msg">Data to Authenticate</label>
+              <textarea id="hmac-msg" class="form-control tool-textarea">Transaction ID #948201 - Amount: $500,000</textarea>
+            </div>
+            <div class="form-group">
+              <label for="hmac-secret">Shared HMAC Secret Key</label>
+              <input type="password" id="hmac-secret" class="form-control" value="SharedSecretHmacKey2026!">
+            </div>
+            <div class="form-group">
+              <label for="hmac-hash">Hash Algorithm</label>
+              <select id="hmac-hash" class="form-control">
+                <option value="SHA-256" selected>HMAC-SHA-256 (Standard)</option>
+                <option value="SHA-384">HMAC-SHA-384 (High)</option>
+                <option value="SHA-512">HMAC-SHA-512 (Ultra)</option>
+              </select>
+            </div>
+            <div class="tool-btn-group">
+              <button id="btn-hmac-sign" class="btn-primary" style="padding: 0.5rem 1.1rem; font-size: 0.88rem;">🛡️ Compute HMAC Tag</button>
+              <button id="btn-hmac-verify" class="btn-secondary" style="padding: 0.5rem 1.1rem; font-size: 0.88rem;">✅ Verify Tag</button>
+            </div>
+          </div>
+          <div>
+            <div class="form-group flex-fill">
+              <label for="hmac-tag">Base64 HMAC Signature Tag</label>
+              <textarea id="hmac-tag" class="form-control tool-textarea" readonly placeholder="HMAC signature tag will appear here..."></textarea>
+            </div>
+            <div id="hmac-stats" class="stats-badge success">Ready for HMAC authentication</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Inspector Tab -->
+      <div id="tab-inspect" class="tool-tab-content">
+        <p style="color: var(--text-secondary); margin-bottom: 1.25rem;">Live inspection of your current browser runtime environment (`globalThis.crypto.subtle` capabilities and native Web Crypto features):</p>
+        <div id="inspector-results"></div>
       </div>
     </section>
 
@@ -224,6 +378,7 @@ console.<span class="fn">log</span>(decryptedText); <span class="cm">// "Confide
       <p style="margin-top: 0.5rem; font-size: 0.82rem;">Pure Web Crypto API • Zero Dependencies • Local Execution • Maintained by <a href="https://putervision.com" target="_blank" rel="noopener noreferrer">PuterVision LLC</a></p>
     </footer>
   </main>
+  <script src="app.js"></script>
 </body>
 </html>
 

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-08-01
+
+### Audit, Planning & System-Wide Version Bump
+
+- **System-Wide Version Bump**: Bumped version to `0.6.2` across `package.json`, `package-lock.json`, source files (`WebCrypt.js`, `WebCryptAsym.js`, `WebCryptPQC.js`), documentation, and unit tests.
+- **Audit Plan Update**: Updated `/plans/PLAN-8-1-26.md` with critical security, performance, Jest coverage tooling fixes, and stub mode test safeguards.
+
 ## [0.6.1] - 2026-07-29
 
 ### Security & Dependency Hardening

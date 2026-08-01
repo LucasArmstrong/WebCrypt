@@ -63,20 +63,20 @@ const decrypted = await wca.decryptText(encrypted, keys.privateKey);
 
 ## Features
 
-| Feature                     | Status  | Details                                               |
-| --------------------------- | ------- | ----------------------------------------------------- |
-| Text encryption             | ✅ Done | AES-256-GCM, returns base64 string                    |
-| File encryption             | ✅ Done | Streaming — handles large files (10 MB decrypt limit) |
-| WebRTC E2EE                 | ✅ Done | Insertable Streams for video + audio                  |
-| Digital signatures          | ✅ Done | ECDSA, RSA-PSS                                        |
-| ECDH key exchange           | ✅ Done | P-256 / P-384 Diffie-Hellman                          |
-| HMAC                        | ✅ Done | SHA-256/384/512 and SHA-3                             |
-| Key derivation              | ✅ Done | PBKDF2 (600k iterations), SHA-3 KDF, HKDF             |
-| Key caching                 | ✅ Done | 5-min TTL, LRU eviction (max 10)                      |
-| TypeScript                  | ✅ Done | Full `.d.ts` for all modules                          |
-| Zero dependencies           | ✅ Done | Pure Web Crypto API                                   |
-| JWE (JSON Web Encryption)   | ✅ Done | RFC 7516 Compact Serialization (RSA-OAEP/A256GCM)     |
-| Post-quantum (Kyber/Dilith) | ⚠️ Stub | Placeholder — see [docs/PQC.md](./docs/PQC.md)        |
+| Feature                     | Status  | Details                                                    |
+| --------------------------- | ------- | ---------------------------------------------------------- |
+| Text encryption             | ✅ Done | AES-256-GCM, returns base64 string                         |
+| File encryption             | ✅ Done | Streaming — handles large files (1 GB size limit)          |
+| WebRTC E2EE                 | ✅ Done | Insertable Streams for video + audio                       |
+| Digital signatures          | ✅ Done | ECDSA, RSA-PSS                                             |
+| ECDH key exchange           | ✅ Done | P-256 / P-384 Diffie-Hellman                               |
+| HMAC                        | ✅ Done | SHA-256/384/512 and SHA-3                                  |
+| Key derivation              | ✅ Done | PBKDF2 (600k iterations), SHA-3 KDF, HKDF                  |
+| Key caching                 | ✅ Done | Safe unref'd timers & reference nulling                    |
+| TypeScript                  | ✅ Done | Full `.d.ts` for all modules                               |
+| Zero dependencies           | ✅ Done | Pure Web Crypto API                                        |
+| JWE (JSON Web Encryption)   | ✅ Done | RFC 7516 Compact Serialization (RSA-OAEP/A256GCM)          |
+| Post-quantum (Kyber/Dilith) | ⚠️ Stub | Stub mode testing guard — see [docs/PQC.md](./docs/PQC.md) |
 
 ---
 
@@ -452,18 +452,19 @@ See [docs/PQC.md](./docs/PQC.md) for the full API reference.
 | Signatures            | ECDSA       | ⚠️ Vulnerable to Shor's algorithm                  |
 | PQC (Kyber/Dilithium) | Stubs       | ❌ Not real PQC yet                                |
 
-### Security hardening (v0.6.1)
+### Security hardening (v0.6.2)
 
-- PBKDF2 iterations: **600,000** (OWASP 2025+ compliant)
-- Unique **128-bit salt** per message/file
-- Unique **96-bit IV** per chunk/frame
-- Key cache with **5-minute TTL**, LRU eviction, and automatic `unref()` timer cleanup
-- Deterministic password-derived HMAC key derivation (`generateHmacKey` / `generateHmacKeySHA3`)
-- Non-blocking timing-attack resistant verification via `TimingSafeHelper`
-- High-speed 32KB chunked Base64 conversion
-- Input validation / DoS protection (10 MB size limit)
-- Error messages sanitized in production (`NODE_ENV=production`)
-- No keys ever leave your device
+- **PBKDF2 Iterations**: **600,000** (OWASP 2025+ compliant).
+- **Non-Exportable HMAC Keys**: Generated HMAC keys pass `extractable: false` to `crypto.subtle.importKey` preventing secret key extraction while allowing full signing and verification.
+- **Constant-Time Verification Contract**: `TimingSafeHelper.timingSafeVerify()` catches signature verification failures and returns `false` with padding instead of re-throwing exceptions.
+- **PQC Stub Guard**: `WebCryptPQC._STUB_MODE` throws explicit errors on production calls unless `WebCryptPQC.enableStubTesting(true)` is explicitly enabled for unit testing.
+- **Safe Memory Cleanup**: Map mutations are isolated prior to deletion in `clearKeyCache()` and secret `CryptoKey` references are nulled.
+- **Stack-Safe Base64**: Uses 1024-byte chunking in Base64 encoding/decoding, eliminating call stack overflow risks across JS runtimes.
+- **Base64 Padding Resilience**: `_base64ToArrayBuffer()` automatically normalizes unpadded Base64 strings.
+- **Increased File Payload Limit**: `MAX_ENCRYPTED_DATA_SIZE` increased to **1 GB** for large file streaming.
+- **Full-Entropy Random Passwords**: `generateRandomPassword()` returns full-entropy hexadecimal strings derived via `crypto.getRandomValues`.
+- **SHA-3 Fallback Warning**: Explicit `console.warn` logging when SHA-3 falls back to SHA-256/384/512 in standard Web Crypto runtimes.
+- **Sanitized Production Logs**: Detailed internal error logging gated behind `NODE_ENV !== "production"`.
 
 ### Known limitations
 

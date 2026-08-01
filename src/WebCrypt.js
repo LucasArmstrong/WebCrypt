@@ -1,5 +1,5 @@
 // src/WebCrypt.js
-// version: 0.6.1
+// version: 0.6.2
 
 /**
  * WebCrypt — Password-based symmetric encryption using AES-256-GCM.
@@ -41,6 +41,17 @@ export class WebCrypt {
   // DEFAULT_HMAC_SALT: Default static salt for deterministic password-derived HMAC key derivation
   static DEFAULT_HMAC_SALT = new TextEncoder().encode("WebCrypt-HMAC-DefaultSalt-v0.6");
 
+  /**
+   * Generates a cryptographically secure random salt for HMAC key derivation.
+   * @param {number} [length=16] Length of salt in bytes
+   * @returns {Uint8Array} Random salt bytes
+   */
+  static generateHmacSalt(length = 16) {
+    const cryptoInstance =
+      globalThis.crypto || (typeof require !== "undefined" && require("crypto").webcrypto);
+    return cryptoInstance.getRandomValues(new Uint8Array(length));
+  }
+
   // Caches derived keys for instant reuse with same password/salt (performance optimization)
   static MAX_KEY_CACHE_SIZE = 10; // LRU cache max size
   static KEY_CACHE_TTL_MS = 300_000; // 5 minutes TTL per key
@@ -77,10 +88,18 @@ export class WebCrypt {
    */
   _cleanupExpiredKeys() {
     const now = Date.now();
+    const keysToDelete = [];
     for (const [cacheKey, value] of this.keyCache.entries()) {
       if (now - value.createdAt > WebCrypt.KEY_CACHE_TTL_MS) {
-        this.keyCache.delete(cacheKey);
+        keysToDelete.push(cacheKey);
       }
+    }
+    for (const key of keysToDelete) {
+      const entry = this.keyCache.get(key);
+      if (entry) {
+        entry.key = null;
+      }
+      this.keyCache.delete(key);
     }
   }
 
@@ -88,6 +107,11 @@ export class WebCrypt {
    * Clear entire key cache and securely erase all keys
    */
   clearKeyCache() {
+    for (const [key, value] of this.keyCache) {
+      if (value) {
+        value.key = null;
+      }
+    }
     this.keyCache.clear();
   }
 
@@ -180,7 +204,7 @@ export class WebCrypt {
   // Chunked conversion avoids stack overflow and O(N^2) memory churn on large buffers
   _arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
-    const CHUNK_SIZE = 0x8000; // 32KB chunks
+    const CHUNK_SIZE = 1024; // 1KB chunks eliminate stack overflow risks across all JS engines
     let binary = "";
     for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
       binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
@@ -189,7 +213,12 @@ export class WebCrypt {
   }
 
   _base64ToArrayBuffer(base64) {
-    const binary = atob(base64);
+    let padded = base64;
+    const mod = base64.length % 4;
+    if (mod > 0) {
+      padded += "=".repeat(4 - mod);
+    }
+    const binary = atob(padded);
     const len = binary.length;
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i++) {
@@ -223,8 +252,8 @@ export class WebCrypt {
     return this._arrayBufferToBase64(result.buffer);
   }
 
-  // Maximum allowed encrypted data size (10MB) to prevent DoS attacks
-  static MAX_ENCRYPTED_DATA_SIZE = 10 * 1024 * 1024;
+  // Max encrypted data size for single-buffer operations (1GB threshold)
+  static MAX_ENCRYPTED_DATA_SIZE = 1024 * 1024 * 1024;
 
   /**
    * Decrypt a Base64 string produced by encryptText().
@@ -449,7 +478,7 @@ export class WebCrypt {
       "raw",
       keyMaterial,
       { name: "HMAC", hash },
-      true, // Exportable for storage if needed
+      false, // Non-exportable for security
       ["sign", "verify"]
     );
   }
@@ -526,7 +555,7 @@ export class WebCrypt {
       hmacHash = hash.replace("SHA3-", "SHA-");
     }
 
-    return crypto.subtle.importKey("raw", keyMaterial, { name: "HMAC", hash: hmacHash }, true, [
+    return crypto.subtle.importKey("raw", keyMaterial, { name: "HMAC", hash: hmacHash }, false, [
       "sign",
       "verify",
     ]);
@@ -567,8 +596,13 @@ export class WebCrypt {
    * @returns {Promise<string>} Base64-encoded encrypted string
    */
   async encryptData(data, password) {
-    const text = JSON.stringify(data);
-    return await this.encryptText(text, password);
+    try {
+      const text = JSON.stringify(data);
+      return await this.encryptText(text, password);
+    } catch (e) {
+      if (e.message && e.message.startsWith("WebCrypt")) throw e;
+      throw new Error(`Failed to serialize data: ${e.message}`);
+    }
   }
 
   /**
@@ -578,8 +612,15 @@ export class WebCrypt {
    * @returns {Promise<any>} The original JavaScript data
    */
   async decryptData(b64, password) {
-    const text = await this.decryptText(b64, password);
-    return JSON.parse(text);
+    try {
+      const text = await this.decryptText(b64, password);
+      return JSON.parse(text);
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        throw new Error(`Failed to parse decrypted data as JSON: ${e.message}`);
+      }
+      throw e;
+    }
   }
 
   /**
@@ -591,10 +632,6 @@ export class WebCrypt {
   generateRandomPassword(length = 32) {
     const cryptoInstance = this._getCrypto();
     const randomBytes = cryptoInstance.getRandomValues(new Uint8Array(length));
-    let binary = "";
-    for (let i = 0; i < randomBytes.byteLength; i++) {
-      binary += String.fromCharCode(randomBytes[i]);
-    }
-    return btoa(binary);
+    return Array.from(randomBytes, b => b.toString(16).padStart(2, "0")).join("");
   }
 }

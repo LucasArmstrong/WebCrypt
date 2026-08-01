@@ -23,7 +23,10 @@ Kyber is a lattice-based Key Encapsulation Mechanism selected by NIST for post-q
 ```js
 import { WebCryptPQC } from "webcrypt";
 
-const pqc = new WebCryptPQC(); // ⚠️ Will warn about stub status
+// Enable stub mode for development/testing environments
+WebCryptPQC.enableStubTesting(true);
+
+const pqc = new WebCryptPQC(); // ⚠️ Warns about stub status
 
 // Generate Kyber key pair (choose security level)
 const kyberKeys = await pqc.generateKyberKeyPair("Kyber768"); // 192-bit security

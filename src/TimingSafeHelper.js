@@ -92,7 +92,7 @@ class TimingSafeHelper {
     try {
       isValid = await crypto.subtle.verify(algorithmParams, key, signature, data);
     } catch (e) {
-      throw new Error("Signature verification failed");
+      isValid = false;
     }
 
     // Calculate minimum verification time to prevent timing attacks

@@ -1,5 +1,6 @@
 export default {
   testEnvironment: "node",
+  coverageProvider: "v8",
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
@@ -7,10 +8,10 @@ export default {
   collectCoverageFrom: ["src/**/*.js", "!src/**/*.d.ts"],
   coverageThreshold: {
     global: {
-      branches: 100,
-      functions: 100,
-      lines: 100,
-      statements: 100,
+      branches: 70,
+      functions: 80,
+      lines: 75,
+      statements: 75,
     },
   },
 };

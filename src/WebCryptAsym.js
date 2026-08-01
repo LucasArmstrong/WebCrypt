@@ -1,5 +1,5 @@
 // src/WebCryptAsym.js
-// version: 0.6.1
+// version: 0.6.2
 import TimingSafeHelper from "./TimingSafeHelper.js"; // Add timing-safe helper for DoS protection and constant-time comparisons
 
 /**
@@ -66,66 +66,10 @@ export class WebCryptAsym {
   static PBKDF2_HASH = "SHA-256";
   // ⚠️ INCREASED to OWASP 2023 recommended minimum of 600k iterations (was 100k)
   static PBKDF2_ITERATIONS = 600_000;
-  static MAX_KEY_CACHE_SIZE = 10; // LRU cache max size
-  static KEY_CACHE_TTL_MS = 300_000; // 5 minutes TTL per key
   static ARGON2_ALGORITHM = "Argon2id";
 
   constructor() {
     this._crypto = this._getCrypto();
-    // Cache for frequently used keys to improve performance (with LRU eviction)
-    this._keyCache = new Map();
-    this._keyCacheCleanupInterval = null;
-    this._startAutoCleanup();
-  }
-
-  /**
-   * Start automatic cache cleanup every minute to remove expired keys
-   */
-  _startAutoCleanup() {
-    // Clean up immediately on start
-    this._cleanupExpiredKeys();
-
-    // Then clean up every minute
-    this._keyCacheCleanupInterval = setInterval(() => {
-      this._cleanupExpiredKeys();
-    }, 60_000);
-
-    // Unref timer in Node.js environments to avoid keeping event loop alive
-    if (
-      this._keyCacheCleanupInterval &&
-      typeof this._keyCacheCleanupInterval.unref === "function"
-    ) {
-      this._keyCacheCleanupInterval.unref();
-    }
-  }
-
-  /**
-   * Clean up expired keys from cache based on TTL
-   */
-  _cleanupExpiredKeys() {
-    const now = Date.now();
-    for (const [cacheKey, value] of this._keyCache.entries()) {
-      if (now - value.createdAt > WebCryptAsym.KEY_CACHE_TTL_MS) {
-        this._keyCache.delete(cacheKey);
-      }
-    }
-  }
-
-  /**
-   * Clear entire key cache and securely erase all keys
-   */
-  clearKeyCache() {
-    this._keyCache.clear();
-  }
-
-  /**
-   * Stop automatic cleanup interval
-   */
-  stopAutoCleanup() {
-    if (this._keyCacheCleanupInterval) {
-      clearInterval(this._keyCacheCleanupInterval);
-      this._keyCacheCleanupInterval = null;
-    }
   }
 
   _getCrypto() {
@@ -182,7 +126,7 @@ export class WebCryptAsym {
   // Chunked block conversion avoids stack overflow and O(N^2) memory overhead on multi-MB buffers
   _arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
-    const CHUNK_SIZE = 0x8000; // 32KB chunks
+    const CHUNK_SIZE = 1024; // 1KB chunks eliminate stack overflow risks across all JS engines
     let binary = "";
     for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
       binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
@@ -191,7 +135,12 @@ export class WebCryptAsym {
   }
 
   _base64ToArrayBuffer(base64) {
-    const binary = atob(base64);
+    let padded = base64;
+    const mod = base64.length % 4;
+    if (mod > 0) {
+      padded += "=".repeat(4 - mod);
+    }
+    const binary = atob(padded);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {
       bytes[i] = binary.charCodeAt(i);
@@ -216,6 +165,13 @@ export class WebCryptAsym {
    * @returns {Promise<CryptoKey>} Derived key (PBKDF2 fallback, NOT true Argon2!)
    */
   async deriveKeyArgon2(password, salt, options = {}) {
+    return this.deriveKeyPBKDF2Fallback(password, salt, options);
+  }
+
+  /**
+   * High-iteration PBKDF2 key derivation (used as fallback when Argon2 is requested without native support).
+   */
+  async deriveKeyPBKDF2Fallback(password, salt, options = {}) {
     console.warn(
       "⚠️ CRITICAL: Argon2id is NOT supported by Web Crypto API. " +
         "Falling back to PBKDF2 with high iterations (still weaker than true Argon2). " +
@@ -227,7 +183,8 @@ export class WebCryptAsym {
       password,
       salt,
       1000000, // 1M iterations (stronger than default 600k)
-      "SHA-256"
+      "SHA-256",
+      256
     );
   }
 
@@ -262,24 +219,6 @@ export class WebCryptAsym {
     return await this._crypto.subtle.importKey("pkcs8", binary, WebCryptAsym.RSA_ALGORITHM, true, [
       "decrypt",
     ]);
-  }
-
-  /**
-   * Get a cached key to improve performance
-   * @param {string} cacheKey - Key for caching
-   * @returns {CryptoKey | null} Cached key or null if not found
-   */
-  _getCachedKey(cacheKey) {
-    return this._keyCache.get(cacheKey) || null;
-  }
-
-  /**
-   * Cache a key for future use
-   * @param {string} cacheKey - Key for caching
-   * @param {CryptoKey} key - The key to cache
-   */
-  _cacheKey(cacheKey, key) {
-    this._keyCache.set(cacheKey, key);
   }
 
   // ────────────────────── Hybrid Text Encryption/Decryption ──────────────────────
@@ -325,6 +264,20 @@ export class WebCryptAsym {
 
     return this._arrayBufferToBase64(result.buffer);
   }
+
+  /** @deprecated Key caching is removed in asymmetric module */
+  _getCachedKey() {
+    return null;
+  }
+
+  /** @deprecated Key caching is removed in asymmetric module */
+  _cacheKey() {}
+
+  /** @deprecated Key caching is removed in asymmetric module */
+  clearKeyCache() {}
+
+  /** @deprecated Key caching is removed in asymmetric module */
+  stopAutoCleanup() {}
 
   async decryptText(encryptedB64, privateKey) {
     try {
@@ -450,8 +403,8 @@ export class WebCryptAsym {
     return { blob: newBlob, filename };
   }
 
-  // Maximum allowed encrypted data size (10MB) to prevent DoS attacks
-  static MAX_ENCRYPTED_DATA_SIZE = 10 * 1024 * 1024;
+  // Max encrypted data size for single-buffer operations (1GB threshold)
+  static MAX_ENCRYPTED_DATA_SIZE = 1024 * 1024 * 1024;
 
   async decryptFile(fileOrBlob, privateKey) {
     // DoS protection: Check file size before loading into memory

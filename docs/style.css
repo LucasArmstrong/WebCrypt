@@ -316,22 +316,22 @@ button.btn-toggle-desc:hover {
 .card {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(12px);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  margin-bottom: 2rem;
+  backdrop-filter: blur(16px);
+  border-radius: 20px;
+  padding: 2.75rem 2.5rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  margin-bottom: 3.5rem;
 }
 
 .section-title {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2.25rem;
 }
 
 .section-title h2 {
-  font-size: 2rem;
+  font-size: 2.1rem;
   font-weight: 800;
-  margin-top: 0.5rem;
+  margin-top: 0.35rem;
 }
 
 /* Features Grid */
@@ -339,7 +339,8 @@ button.btn-toggle-desc:hover {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.5rem;
-  margin: 3rem 0;
+  margin-top: 2rem;
+  margin-bottom: 3.5rem;
 }
 
 .feature-card {
@@ -394,7 +395,24 @@ button.btn-toggle-desc:hover {
 .demo-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  gap: 1.75rem;
+  align-items: stretch;
+}
+
+.demo-grid > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.demo-grid .form-group.flex-fill {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.demo-grid .form-group.flex-fill .tool-textarea {
+  flex: 1;
+  min-height: 120px;
 }
 
 @media (max-width: 768px) {
@@ -430,6 +448,161 @@ button.btn-toggle-desc:hover {
   border-color: var(--accent-cyan);
 }
 
+/* Tool Workbench & Segmented Tab Navigation */
+.tool-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(17, 24, 39, 0.7);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.4rem;
+  margin-bottom: 2rem;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.tool-tab-btn {
+  flex: 1 1 auto;
+  min-width: 140px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  padding: 0.65rem 1.1rem;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.tool-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.tool-tab-btn.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(99, 102, 241, 0.25));
+  border: 1px solid var(--accent-cyan);
+  box-shadow: 0 4px 16px rgba(6, 182, 212, 0.3);
+}
+
+.tool-tab-content {
+  display: none;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.tool-tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tool-btn-group {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.tool-textarea {
+  min-height: 100px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.stats-badge {
+  display: inline-block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  margin-top: 0.75rem;
+}
+
+.stats-badge.success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.stats-badge.pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.stats-badge.error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Inspector Tool List */
+.inspector-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.inspector-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1.1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.inspector-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.inspector-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  letter-spacing: 0.03em;
+}
+
+.badge-pass {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.badge-warn {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.badge-fail {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
 /* Responsive Breakpoints */
 @media (max-width: 900px) {
   header {
@@ -461,6 +634,13 @@ button.btn-toggle-desc:hover {
     min-width: 135px;
     max-width: 220px;
   }
+
+  .tool-tab-btn {
+    flex: 1 1 calc(50% - 0.4rem);
+    min-width: 125px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.86rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -479,6 +659,11 @@ button.btn-toggle-desc:hover {
     max-width: 100%;
     padding: 0.8rem 1.25rem !important;
     font-size: 0.95rem !important;
+  }
+
+  .tool-tab-btn {
+    flex: 1 1 100%;
+    width: 100%;
   }
 }
 

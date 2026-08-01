@@ -8,3 +8,10 @@
 .vision-memory-mcp/
 .env
 .state-memory-mcp
+
+/plans
+
+*.log
+.DS_Store
+npm-debug.log*
+

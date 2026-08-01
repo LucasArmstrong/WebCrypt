@@ -1,8 +1,49 @@
-# Security Fixes — WebCrypt v0.5.3
+# Security Fixes — WebCrypt v0.6.2 & v0.5.3
 
-This document details all security hardening changes made in v0.5.3.
+This document details all security hardening changes introduced in v0.6.2 and prior releases.
 
-## Critical Fixes
+---
+
+## WebCrypt v0.6.2 Audit Fixes
+
+### 1. Non-Exportable HMAC Key Enforcement
+
+- **Issue**: HMAC keys derived via `generateHmacKey()` were imported with `extractable: true`, allowing potentially unauthorized key export.
+- **Fix**: Updated `crypto.subtle.importKey()` options to set `extractable: false`, preventing key extraction while maintaining full signing and verification capabilities.
+
+### 2. Timing-Safe Helper Verification Contract
+
+- **Issue**: `TimingSafeHelper.timingSafeVerify()` re-threw internal `crypto.subtle.verify()` exceptions, breaking the expected `Promise<boolean>` return type and risking timing oracle side-channels.
+- **Fix**: Wrapped verification in `try/catch` to set `isValid = false` on failure, executing constant-time timing padding before returning `false`.
+
+### 3. Post-Quantum Stub Mode Protection
+
+- **Issue**: Calling placeholder Kyber/Dilithium stubs without explicit opt-in could lead to accidental production use of stub cryptography.
+- **Fix**: Added static `_STUB_MODE = true` flag and guard assertions. Production calls throw an error unless `WebCryptPQC.enableStubTesting(true)` is explicitly invoked for testing.
+
+### 4. Stack-Safe Base64 Conversion
+
+- **Issue**: Converting large byte buffers to Base64 using `String.fromCharCode(...uint8)` triggered `RangeError: Maximum call stack size exceeded` in browsers and Node.js.
+- **Fix**: Implemented a 1024-byte chunk limit across all Base64 utilities (`_arrayBufferToBase64`), ensuring zero call stack overflow risks regardless of payload size.
+
+### 5. Base64 Unpadded Input Support
+
+- **Issue**: Incoming Base64 payloads missing trailing `=` padding caused `atob()` decoders to fail.
+- **Fix**: Added automatic padding normalization in `_base64ToArrayBuffer()`.
+
+### 6. Safe Key Cache Cleanup & Memory Erasure
+
+- **Issue**: Key cache eviction mutated Map objects during iteration and retained key object references.
+- **Fix**: Collected expired cache keys into a static array before deletion and explicitly nulled key references (`value.key = null`) upon cache clearance.
+
+### 7. File Encryption Size Limit Expansion
+
+- **Issue**: 10MB limit on `MAX_ENCRYPTED_DATA_SIZE` blocked large file streaming.
+- **Fix**: Increased `MAX_ENCRYPTED_DATA_SIZE` to 1 GB (`1024 * 1024 * 1024`) across `WebCrypt` and `WebCryptAsym`.
+
+---
+
+## Critical Fixes (v0.5.3)
 
 ### 1. PQC Stub Warnings
 
