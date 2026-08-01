@@ -33,12 +33,14 @@ export class WebCryptAsym {
   // RSA_KEY_PARAMS: Standard secure parameters for key generation
   // modulusLength=4096 offers ~128-bit classical security level
   // publicExponent=65537 (Fermat prime) for optimal performance
-  static RSA_KEY_PARAMS = {
-    name: "RSA-OAEP",
-    modulusLength: 4096,
-    publicExponent: new Uint8Array([1, 0, 1]), // 65537
-    hash: "SHA-256",
-  };
+  static get RSA_KEY_PARAMS() {
+    return {
+      name: "RSA-OAEP",
+      modulusLength: 4096,
+      publicExponent: new Uint8Array([1, 0, 1]), // 65537
+      hash: "SHA-256",
+    };
+  }
 
   // Symmetric constants used in hybrid mode
   static AES_ALGORITHM = "AES-GCM"; // Authenticated encryption with integrity
@@ -195,11 +197,17 @@ export class WebCryptAsym {
 
   // ────────────────────── RSA Key Management (for Hybrid Encryption) ──────────────────────
   // Generates 4096-bit RSA key pair: Secure against classical factoring attacks (e.g., GNFS)
-  async generateKeyPair() {
-    return await this._crypto.subtle.generateKey(WebCryptAsym.RSA_KEY_PARAMS, true, [
-      "encrypt",
-      "decrypt",
-    ]);
+  async generateKeyPair(modulusLength = 4096) {
+    return await this._crypto.subtle.generateKey(
+      {
+        name: "RSA-OAEP",
+        modulusLength,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: "SHA-256",
+      },
+      true,
+      ["encrypt", "decrypt"]
+    );
   }
 
   async exportPublicKey(publicKey) {
