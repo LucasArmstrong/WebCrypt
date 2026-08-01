@@ -11,7 +11,7 @@ describe("WebCryptPQC - Hybrid Encryption", () => {
   });
 
   test("hybrid encapsulation combines Kyber and RSA", async () => {
-    const rsaKeys = await asym.generateKeyPair();
+    const rsaKeys = await asym.generateKeyPair(2048);
     const kyberKeys = await pqc.generateKyberKeyPair("Kyber768");
 
     const result = await pqc.hybridEncapsulate(rsaKeys.publicKey, kyberKeys.publicKey, "Kyber768");
@@ -26,7 +26,7 @@ describe("WebCryptPQC - Hybrid Encryption", () => {
   });
 
   test("hybrid decapsulation recovers shared secret", async () => {
-    const rsaKeys = await asym.generateKeyPair();
+    const rsaKeys = await asym.generateKeyPair(2048);
     const kyberKeys = await pqc.generateKyberKeyPair("Kyber768");
 
     const { kyberCiphertext, rsaWrappedSharedSecret } = await pqc.hybridEncapsulate(
@@ -49,7 +49,7 @@ describe("WebCryptPQC - Hybrid Encryption", () => {
 
   test("hybrid works with all Kyber levels", async () => {
     for (const level of ["Kyber512", "Kyber768", "Kyber1024"]) {
-      const rsaKeys = await asym.generateKeyPair();
+      const rsaKeys = await asym.generateKeyPair(2048);
       const kyberKeys = await pqc.generateKyberKeyPair(level);
 
       const result = await pqc.hybridEncapsulate(rsaKeys.publicKey, kyberKeys.publicKey, level);

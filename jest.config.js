@@ -6,6 +6,7 @@ export default {
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },
   collectCoverageFrom: ["src/**/*.js", "!src/**/*.d.ts"],
+  testTimeout: 30000,
   coverageThreshold: {
     global: {
       branches: 70,

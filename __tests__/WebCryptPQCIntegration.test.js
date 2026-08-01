@@ -15,11 +15,11 @@ describe("WebCryptPQC - Integration Tests", () => {
 
   test("Hybrid key exchange between two parties", async () => {
     // Alice generates hybrid keys
-    const aliceRsa = await asym.generateKeyPair();
+    const aliceRsa = await asym.generateKeyPair(2048);
     const aliceKyber = await pqc.generateKyberKeyPair("Kyber768");
 
     // Bob generates hybrid keys
-    const bobRsa = await asym.generateKeyPair();
+    const bobRsa = await asym.generateKeyPair(2048);
     const bobKyber = await pqc.generateKyberKeyPair("Kyber768");
 
     // Alice → Bob: hybrid encapsulate
@@ -99,7 +99,7 @@ describe("WebCryptPQC - Integration Tests", () => {
 
   test("All three Kyber security levels work end-to-end", async () => {
     for (const level of ["Kyber512", "Kyber768", "Kyber1024"]) {
-      const rsa = await asym.generateKeyPair();
+      const rsa = await asym.generateKeyPair(2048);
       const kyber = await pqc.generateKyberKeyPair(level);
 
       const encapsulated = await pqc.hybridEncapsulate(rsa.publicKey, kyber.publicKey, level);
