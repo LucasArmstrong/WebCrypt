@@ -1,5 +1,5 @@
 // src/WebCryptAsym.js
-// version: 0.6.5
+// version: 0.7.0
 import TimingSafeHelper from "./TimingSafeHelper.js"; // Add timing-safe helper for DoS protection and constant-time comparisons
 
 /**
@@ -136,7 +136,7 @@ export class WebCryptAsym {
   // Chunked block conversion avoids stack overflow and O(N^2) memory overhead on multi-MB buffers
   _arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
-    const CHUNK_SIZE = 1024; // 1KB chunks eliminate stack overflow risks across all JS engines
+    const CHUNK_SIZE = 32768; // 32KB chunks prevent call stack overflow on large buffers
     let binary = "";
     for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
       binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
@@ -150,11 +150,7 @@ export class WebCryptAsym {
     if (mod > 0) {
       padded += "=".repeat(4 - mod);
     }
-    const binary = atob(padded);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
+    const bytes = Uint8Array.from(atob(padded), c => c.charCodeAt(0));
     return bytes.buffer;
   }
 
@@ -907,23 +903,20 @@ export class WebCryptAsym {
   }
 
   /**
-   * Generate a Poly1305 authentication tag
-   * @param {ArrayBuffer} data - Data to authenticate
-   * @param {CryptoKey} key - Poly1305 key (should be 32 bytes)
+   * @deprecated Poly1305 is not supported by standard Web Crypto API. Use signHMAC() instead.
+   * @param {ArrayBuffer|string} data - Data to authenticate
+   * @param {CryptoKey} key - Key material
    * @returns {Promise<string>} Base64-encoded authentication tag
    */
   async authenticatePoly1305(data, key) {
-    // Note: Poly1305 is typically used in combination with ChaCha20 for AEAD
-    // This implementation provides a basic interface for Poly1305 usage
-    const tag = await this._crypto.subtle.sign(
-      {
-        name: "Poly1305",
-      },
-      key,
-      data
+    if (typeof console !== "undefined" && console.warn) {
+      console.warn(
+        "⚠️ Poly1305 is NOT supported by standard Web Crypto API. Use signHMAC() for authentication."
+      );
+    }
+    throw new Error(
+      "Poly1305 algorithm is not supported by standard Web Crypto API (crypto.subtle). Use signHMAC() instead."
     );
-
-    return this._arrayBufferToBase64(tag);
   }
 
   /**

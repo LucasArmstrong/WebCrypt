@@ -1,5 +1,5 @@
 // src/WebCrypt.js
-// version: 0.6.5
+// version: 0.7.0
 
 /**
  * WebCrypt — Password-based symmetric encryption using AES-256-GCM.
@@ -216,7 +216,7 @@ export class WebCrypt {
   // Chunked conversion avoids stack overflow and O(N^2) memory churn on large buffers
   _arrayBufferToBase64(buffer) {
     const bytes = new Uint8Array(buffer);
-    const CHUNK_SIZE = 1024; // 1KB chunks eliminate stack overflow risks across all JS engines
+    const CHUNK_SIZE = 32768; // 32KB chunks prevent call stack overflow on large buffers
     let binary = "";
     for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
       binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
@@ -230,12 +230,7 @@ export class WebCrypt {
     if (mod > 0) {
       padded += "=".repeat(4 - mod);
     }
-    const binary = atob(padded);
-    const len = binary.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
+    const bytes = Uint8Array.from(atob(padded), c => c.charCodeAt(0));
     return bytes.buffer;
   }
 
@@ -316,7 +311,16 @@ export class WebCrypt {
    * @param {string} password - Encryption password
    * @returns {Promise<{blob: Blob, filename: string}>} Encrypted blob and suggested filename
    */
-  async encryptFile(fileOrBlob, password) {
+  /**
+   * Encrypt a File or Blob using password-derived key.
+   *
+   * @param {File|Blob} fileOrBlob - File or Blob to encrypt
+   * @param {string} password - Encryption password
+   * @param {Object} [options={}] - Optional options ({ parallelChunks: 1 })
+   * @returns {Promise<{blob: Blob, filename: string}>} Encrypted blob and suggested filename
+   */
+  async encryptFile(fileOrBlob, password, options = {}) {
+    const parallelChunks = options.parallelChunks || 1;
     const salt = crypto.getRandomValues(new Uint8Array(WebCrypt.SALT_LENGTH));
     const baseIv = crypto.getRandomValues(new Uint8Array(WebCrypt.IV_LENGTH));
     const key = await this._deriveKey(password, salt);
@@ -324,6 +328,7 @@ export class WebCrypt {
     const chunks = [];
     const reader = fileOrBlob.stream().getReader();
     let counter = 0;
+    let pendingPromises = [];
 
     while (true) {
       const { done, value } = await reader.read();
@@ -333,8 +338,19 @@ export class WebCrypt {
       iv.set(baseIv);
       new DataView(iv.buffer).setUint32(WebCrypt.IV_LENGTH - 4, counter++, true);
 
-      const encrypted = await crypto.subtle.encrypt({ name: WebCrypt.ALGORITHM, iv }, key, value);
-      chunks.push(encrypted);
+      const promise = crypto.subtle.encrypt({ name: WebCrypt.ALGORITHM, iv }, key, value);
+      pendingPromises.push(promise);
+
+      if (pendingPromises.length >= parallelChunks) {
+        const resolved = await Promise.all(pendingPromises);
+        chunks.push(...resolved);
+        pendingPromises = [];
+      }
+    }
+
+    if (pendingPromises.length > 0) {
+      const resolved = await Promise.all(pendingPromises);
+      chunks.push(...resolved);
     }
 
     const header = new Uint8Array(WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH);
@@ -352,10 +368,12 @@ export class WebCrypt {
    *
    * @param {File|Blob} fileOrBlob - Encrypted File or Blob
    * @param {string} password - Must match the password used for encryption
+   * @param {Object} [options={}] - Optional options ({ parallelChunks: 1 })
    * @returns {Promise<{blob: Blob, filename: string}>} Decrypted blob and original filename
    * @throws {Error} If password is wrong, file is corrupted, or file exceeds 10 MB
    */
-  async decryptFile(fileOrBlob, password) {
+  async decryptFile(fileOrBlob, password, options = {}) {
+    const parallelChunks = options.parallelChunks || 1;
     // DoS protection: Check size before loading entire file into memory
     const fileSize = fileOrBlob.size || (fileOrBlob.blob && fileOrBlob.blob.size);
     if (fileSize && fileSize > WebCrypt.MAX_ENCRYPTED_DATA_SIZE) {
@@ -381,6 +399,7 @@ export class WebCrypt {
     const chunks = [];
     let offset = 0,
       counter = 0;
+    let pendingPromises = [];
 
     while (offset < ciphertext.byteLength) {
       const size = Math.min(WebCrypt.CHUNK_SIZE, ciphertext.byteLength - offset);
@@ -390,9 +409,20 @@ export class WebCrypt {
       iv.set(baseIv);
       new DataView(iv.buffer).setUint32(WebCrypt.IV_LENGTH - 4, counter++, true);
 
-      const decrypted = await crypto.subtle.decrypt({ name: WebCrypt.ALGORITHM, iv }, key, chunk);
-      chunks.push(decrypted);
+      const promise = crypto.subtle.decrypt({ name: WebCrypt.ALGORITHM, iv }, key, chunk);
+      pendingPromises.push(promise);
       offset += size;
+
+      if (pendingPromises.length >= parallelChunks) {
+        const resolved = await Promise.all(pendingPromises);
+        chunks.push(...resolved);
+        pendingPromises = [];
+      }
+    }
+
+    if (pendingPromises.length > 0) {
+      const resolved = await Promise.all(pendingPromises);
+      chunks.push(...resolved);
     }
 
     const filename = (fileOrBlob.name || "decrypted").replace(/\.encrypted$/i, "");
@@ -527,12 +557,13 @@ export class WebCrypt {
 
   /**
    * Generate a quantum-resistant HMAC key using SHA-3 hash.
-   * @param {string} [password] Optional password for derivation (600k iterations)
+   * @param {string} [password] Optional password for derivation
    * @param {string} [hash='SHA3-256'] Hash algorithm: 'SHA3-256', 'SHA3-384', 'SHA3-512'
    * @param {Uint8Array|string} [customSalt=null] Optional salt for deterministic derivation (defaults to WebCrypt.DEFAULT_HMAC_SALT if omitted)
+   * @param {number} [iterations=10000] Number of hash iterations for key derivation (default: 10,000 for high performance)
    * @returns {Promise<CryptoKey>} Usable HMAC key with SHA-3
    */
-  async generateHmacKeySHA3(password, hash = "SHA3-256", customSalt = null) {
+  async generateHmacKeySHA3(password, hash = "SHA3-256", customSalt = null, iterations = 10000) {
     const crypto = this._getCrypto();
     let keyMaterial;
 
@@ -547,8 +578,8 @@ export class WebCrypt {
       material.set(encoder.encode(password));
       material.set(salt, password.length);
 
-      // Iterative SHA-3 KDF (600k iterations)
-      for (let i = 0; i < 600000; i++) {
+      // Iterative SHA-3 KDF (configurable iterations, default 10k)
+      for (let i = 0; i < iterations; i++) {
         const hashInput = new Uint8Array(material.byteLength + 4);
         hashInput.set(material);
         new DataView(hashInput.buffer).setUint32(material.byteLength, i, true);

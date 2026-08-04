@@ -6,11 +6,11 @@ import TimingSafeHelper from "../src/TimingSafeHelper.js";
 import fs from "fs";
 import path from "path";
 
-describe("WebCrypt v0.6.x Features & Verification", () => {
-  test("package.json version is 0.6.5", () => {
+describe("WebCrypt v0.7.x Features & Verification", () => {
+  test("package.json version is 0.7.0", () => {
     const pkgPath = path.join(process.cwd(), "package.json");
     const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-    expect(pkg.version).toBe("0.6.5");
+    expect(pkg.version).toBe("0.7.0");
     expect(pkg.author).toBe("PuterVision LLC");
     expect(pkg.homepage).toBe(pkg.homepage);
   });

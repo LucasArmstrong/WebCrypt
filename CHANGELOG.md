@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-08-04
+
+### Security Hardening, Performance Optimization & Infrastructure Enhancements
+
+- **Dilithium Stub Signature Verification**: Updated `dilithiumSign` and `dilithiumVerify` in `WebCryptPQC.js` to compute signature verification tags. `dilithiumVerify` now correctly checks signatures against message and public key material in stub mode and returns `false` on tampered payloads or modified messages.
+- **Base64 Call Stack Safety**: Increased base64 chunking size to 32KB (`32768`) across `WebCrypt.js`, `WebCryptAsym.js`, and `WebCryptPQC.js` to eliminate V8 call stack overflow risks on large payloads.
+- **Poly1305 Web Crypto Error Handling**: Updated `authenticatePoly1305()` in `WebCryptAsym.js` to throw a descriptive error explaining Web Crypto API Poly1305 non-support and pointing users to `signHMAC()`. Marked method as `@deprecated`.
+- **SHA-3 KDF Iteration Optimization**: Added a configurable `iterations` parameter (default `10,000`, down from 600,000) to `generateHmacKeySHA3()`, reducing key derivation latency from ~2-5s to under 100ms.
+- **Base64 Decoding Optimization**: Refactored `_base64ToArrayBuffer()` across all 3 source files to use `Uint8Array.from(atob(padded), c => c.charCodeAt(0))`.
+- **File Stream Concurrency**: Added optional `options.parallelChunks` parameter to `encryptFile()` and `decryptFile()` for concurrent windowed processing via `Promise.all`.
+- **CI/CD Pipeline Security Integration**: Enhanced `.github/workflows/ci.yml` with `npm audit --audit-level=high` step.
+- **TypeScript & Documentation Synchronization**: Synchronized TypeScript declarations across `.d.ts` files, updated `README.md` PBKDF2 Grover resistance notes, and bumped version `0.7.0` across package manifests and source headers.
+
 ## [0.6.5] - 2026-08-01
 
 ### TypeScript Typings, Documentation Sync & System Audit

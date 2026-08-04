@@ -48,11 +48,13 @@ declare class WebCrypt {
    * Encrypts a File or Blob using streaming (low memory, handles huge files)
    * @param file File or Blob to encrypt
    * @param password Encryption password
+   * @param options Optional configuration object ({ parallelChunks?: number })
    * @returns Object with encrypted Blob and suggested filename
    */
   encryptFile(
     file: File | Blob,
-    password: string
+    password: string,
+    options?: { parallelChunks?: number }
   ): Promise<{
     blob: Blob;
     filename: string;
@@ -62,12 +64,14 @@ declare class WebCrypt {
    * Decrypts a .encrypted file produced by encryptFile()
    * @param file Encrypted File or Blob
    * @param password Must match encryption password
+   * @param options Optional configuration object ({ parallelChunks?: number })
    * @returns Object with decrypted Blob and original filename
    * @throws If password is wrong or file is corrupted
    */
   decryptFile(
     file: File | Blob,
-    password: string
+    password: string,
+    options?: { parallelChunks?: number }
   ): Promise<{
     blob: Blob;
     filename: string;
@@ -133,15 +137,17 @@ declare class WebCrypt {
 
   /**
    * Generate a quantum-resistant HMAC key using SHA-3 hash.
-   * @param password Optional password for derivation (600k iterations)
+   * @param password Optional password for derivation
    * @param hash Hash algorithm: 'SHA3-256' | 'SHA3-384' | 'SHA3-512' (default: SHA3-256)
    * @param salt Optional salt for deterministic derivation.
+   * @param iterations Iterations count for SHA-3 KDF derivation (default: 10,000)
    * @returns Usable HMAC key with SHA-3
    */
   generateHmacKeySHA3(
     password?: string,
     hash?: "SHA3-256" | "SHA3-384" | "SHA3-512",
-    salt?: Uint8Array | string
+    salt?: Uint8Array | string,
+    iterations?: number
   ): Promise<CryptoKey>;
 
   /**

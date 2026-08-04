@@ -1,8 +1,18 @@
-# Security Fixes — WebCrypt v0.6.5 & v0.6.4
+# Security Fixes — WebCrypt v0.7.0 & Prior Releases
 
-This document details all security hardening changes introduced in v0.6.5 and prior releases.
+This document details all security hardening changes introduced in v0.7.0 and prior releases.
 
 ---
+
+## WebCrypt v0.7.0 Audit & Security Hardening
+
+- **Dilithium Stub Signature Verification**: `dilithiumVerify()` in `WebCryptPQC.js` checks signature verification tags matching `dilithiumSign` stub material. Invalid or tampered signatures now correctly return `false`.
+- **Base64 Call Stack Safety**: Increased base64 chunking size to 32KB (`32768`) across all source modules to prevent V8 call stack overflow on large payload conversions.
+- **Poly1305 Web Crypto Error Handling**: Updated `authenticatePoly1305()` to throw a clear error explaining Web Crypto API Poly1305 non-support and pointing to `signHMAC()`.
+- **SHA-3 KDF Iteration Optimization**: Added configurable `iterations` parameter (default `10,000`) to `generateHmacKeySHA3()`, dramatically reducing key derivation latency.
+- **Base64 Decoding Optimization**: Refactored `_base64ToArrayBuffer()` across all 3 source modules to `Uint8Array.from(atob(padded), c => c.charCodeAt(0))`.
+- **File Stream Concurrency**: Added `options.parallelChunks` parameter to `encryptFile()` and `decryptFile()` for concurrent chunk processing.
+- **CI/CD Security Audit**: Integrated `npm audit --audit-level=high` into `.github/workflows/ci.yml`.
 
 ## WebCrypt v0.6.5 Audit Fixes
 

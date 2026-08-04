@@ -372,7 +372,7 @@ declare class WebCryptAsym {
   ): Promise<boolean>;
 
   /**
-   * Generate a Poly1305 authentication tag
+   * @deprecated Poly1305 is not supported by standard Web Crypto API. Use signHMAC() instead.
    * @param data - Data to authenticate
    * @param key - Poly1305 key (should be 32 bytes)
    */

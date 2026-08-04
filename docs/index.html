@@ -46,7 +46,7 @@
   <main class="container">
     <!-- Hero Section -->
     <section class="hero">
-      <span class="badge">RELEASE v0.6.5 • ZERO DEPENDENCIES • PURE WEB CRYPTO API</span>
+      <span class="badge">RELEASE v0.7.0 • ZERO DEPENDENCIES • PURE WEB CRYPTO API</span>
       <h1>Zero-Dependency Web Cryptography Suite</h1>
       <p>High-performance AES-256-GCM encryption for text, files, and WebRTC E2EE insertable streams. Built natively for browser and Node.js Web Crypto environments.</p>
       
@@ -328,23 +328,48 @@ console.<span class="fn">log</span>(decryptedText); <span class="cm">// "Confide
             </tr>
             <tr style="border-bottom: 1px solid var(--border-color);">
               <td style="padding: 0.75rem; font-weight: 600;">`WebCrypt`</td>
-              <td style="padding: 0.75rem;">`encryptFile(file, password)`</td>
-              <td style="padding: 0.75rem;">Streaming file encryption returning encrypted Blob.</td>
+              <td style="padding: 0.75rem;">`encryptFile(file, password, options)`</td>
+              <td style="padding: 0.75rem;">Streaming file encryption returning encrypted Blob (parallelChunks support).</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border-color);">
               <td style="padding: 0.75rem; font-weight: 600;">`WebCrypt`</td>
-              <td style="padding: 0.75rem;">`generateHmacKey(password, hash, salt)`</td>
-              <td style="padding: 0.75rem;">Derives deterministic HMAC key using PBKDF2.</td>
+              <td style="padding: 0.75rem;">`createEncryptTransform(password)`</td>
+              <td style="padding: 0.75rem;">WebRTC Insertable Streams E2EE media frame encryption transform.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.75rem; font-weight: 600;">`WebCrypt`</td>
+              <td style="padding: 0.75rem;">`generateHmacKeySHA3(pass, hash, salt, iter)`</td>
+              <td style="padding: 0.75rem;">Derives iterative SHA-3 HMAC key.</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border-color);">
               <td style="padding: 0.75rem; font-weight: 600;">`WebCryptAsym`</td>
-              <td style="padding: 0.75rem;">`generateKeyPair()`</td>
+              <td style="padding: 0.75rem;">`generateKeyPair(modulusLength)`</td>
               <td style="padding: 0.75rem;">Generates 4096-bit RSA-OAEP key pair.</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border-color);">
               <td style="padding: 0.75rem; font-weight: 600;">`WebCryptAsym`</td>
-              <td style="padding: 0.75rem;">`encryptText(text, publicKey)`</td>
-              <td style="padding: 0.75rem;">Hybrid RSA-4096 + AES-256-GCM text encryption.</td>
+              <td style="padding: 0.75rem;">`encryptWithECDH(text, recipientPublicKey)`</td>
+              <td style="padding: 0.75rem;">One-step ECDH public-key encryption.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.75rem; font-weight: 600;">`WebCryptAsym`</td>
+              <td style="padding: 0.75rem;">`signText(text, privateKey)`</td>
+              <td style="padding: 0.75rem;">Digital signature creation using ECDSA P-256 or RSA-PSS.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.75rem; font-weight: 600;">`WebCryptAsym`</td>
+              <td style="padding: 0.75rem;">`encryptJWE(payload, publicKey)`</td>
+              <td style="padding: 0.75rem;">RFC 7516 5-part JWE Compact Serialization.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.75rem; font-weight: 600;">`WebCryptAsym`</td>
+              <td style="padding: 0.75rem;">`deriveChildKeyHierarchical(parentKey, salt)`</td>
+              <td style="padding: 0.75rem;">Hierarchical key derivation from parent key.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.75rem; font-weight: 600;">`WebCryptPQC`</td>
+              <td style="padding: 0.75rem;">`kyberEncapsulate() / dilithiumSign()`</td>
+              <td style="padding: 0.75rem;">NIST Post-Quantum Cryptography key exchange & signatures.</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border-color);">
               <td style="padding: 0.75rem; font-weight: 600;">`TimingSafeHelper`</td>

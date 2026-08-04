@@ -206,23 +206,33 @@ describe("WebCryptPQC - Post-Quantum Cryptography", () => {
         expect(verified).toBe(true);
       });
 
-      test("rejects invalid signature sizes", async () => {
+      test("rejects tampered signatures and modified documents", async () => {
         const keys = await pqc.generateDilithiumKeyPair("Dilithium3");
         const document = new Uint8Array([1, 2, 3, 4, 5]);
-        const invalidSig = new Uint8Array(100);
 
-        // NOTE: This is a stub implementation - Dilithium uses HMAC-based stubs
-        // that may not properly validate signature sizes in all cases
-        // In production with liboqs-js integration, this would reject invalid sizes
-        const result = await pqc.dilithiumVerify(
+        const signature = await pqc.dilithiumSign(document, keys.privateKey, "Dilithium3");
+
+        // Tampered signature byte
+        const tamperedSig = new Uint8Array(signature);
+        tamperedSig[65] ^= 0xff;
+
+        const verifiedTampered = await pqc.dilithiumVerify(
           document,
-          invalidSig,
+          tamperedSig,
           keys.publicKey,
           "Dilithium3"
         );
+        expect(verifiedTampered).toBe(false);
 
-        // Stub implementation returns false for invalid signatures rather than throwing
-        expect(result).toBe(false);
+        // Modified document
+        const modifiedDoc = new Uint8Array([1, 2, 3, 4, 99]);
+        const verifiedModified = await pqc.dilithiumVerify(
+          modifiedDoc,
+          signature,
+          keys.publicKey,
+          "Dilithium3"
+        );
+        expect(verifiedModified).toBe(false);
       });
 
       test("verifies with correct public key", async () => {

@@ -11,6 +11,8 @@
 
 /plans
 
+.env*.local
+.idea/
 *.log
 .DS_Store
 npm-debug.log*
