@@ -193,27 +193,32 @@ describe("WebCrypt Additional Coverage Boost", () => {
   test("WebCrypt Native SHA3 digest mock coverage", async () => {
     const pqc = new WebCryptPQC();
     const originalDigest = pqc._crypto.subtle.digest.bind(pqc._crypto.subtle);
-    pqc._crypto.subtle.digest = async (alg, data) => {
-      if (typeof alg === "string" && alg.startsWith("SHA3-")) {
-        return new ArrayBuffer(32);
-      }
-      return originalDigest(alg, data);
-    };
+    try {
+      pqc._crypto.subtle.digest = async (alg, data) => {
+        if (typeof alg === "string" && alg.startsWith("SHA3-")) {
+          const size = alg === "SHA3-512" ? 64 : alg === "SHA3-384" ? 48 : 32;
+          return new ArrayBuffer(size);
+        }
+        return originalDigest(alg, data);
+      };
 
-    const hash = await pqc._sha3Hash(new Uint8Array([1, 2, 3]), 256);
-    expect(hash.byteLength).toBe(32);
+      const hash = await pqc._sha3Hash(new Uint8Array([1, 2, 3]), 256);
+      expect(hash.byteLength).toBe(32);
 
-    const wca = new WebCryptAsym();
-    wca._crypto.subtle.digest = pqc._crypto.subtle.digest;
-    const masterKey = await wca._crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, [
-      "encrypt",
-      "decrypt",
-    ]);
-    const childKey = await wca.deriveChildKeyHierarchical(
-      masterKey,
-      new Uint8Array(16),
-      "native-sha3"
-    );
-    expect(childKey).toBeDefined();
+      const wca = new WebCryptAsym();
+      const masterKey = await wca._crypto.subtle.generateKey(
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt"]
+      );
+      const childKey = await wca.deriveChildKeyHierarchical(
+        masterKey,
+        new Uint8Array(16),
+        "native-sha3"
+      );
+      expect(childKey).toBeDefined();
+    } finally {
+      pqc._crypto.subtle.digest = originalDigest;
+    }
   });
 });
