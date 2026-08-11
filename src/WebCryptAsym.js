@@ -1,5 +1,5 @@
 // src/WebCryptAsym.js
-// version: 0.7.0
+// version: 0.8.0
 import TimingSafeHelper from "./TimingSafeHelper.js"; // Add timing-safe helper for DoS protection and constant-time comparisons
 
 /**
@@ -365,7 +365,8 @@ export class WebCryptAsym {
   // ────────────────────── Hybrid File Encryption/Decryption (streaming) ──────────────────────
   // Streaming processes large files in 8MB chunks – constant memory usage even for 10GB+ files
   // Counter-mode IV derivation ensures unique nonces without storing per-chunk IVs
-  async encryptFile(fileOrBlob, publicKey) {
+  async encryptFile(fileOrBlob, publicKey, options = {}) {
+    const parallelChunks = options.parallelChunks || 1;
     const aesKey = await this._crypto.subtle.generateKey(
       { name: WebCryptAsym.AES_ALGORITHM, length: WebCryptAsym.AES_LENGTH },
       true,
@@ -391,6 +392,7 @@ export class WebCryptAsym {
     const chunks = [header];
     const reader = fileOrBlob.stream().getReader();
     let counter = 0;
+    let pendingPromises = [];
 
     while (true) {
       const { done, value } = await reader.read();
@@ -401,12 +403,23 @@ export class WebCryptAsym {
       // Deterministic counter in last 4 bytes ensures unique IV per chunk
       new DataView(iv.buffer).setUint32(WebCryptAsym.IV_LENGTH - 4, counter++, true);
 
-      const encrypted = await this._crypto.subtle.encrypt(
+      const promise = this._crypto.subtle.encrypt(
         { name: WebCryptAsym.AES_ALGORITHM, iv },
         aesKey,
         value
       );
-      chunks.push(encrypted);
+      pendingPromises.push(promise);
+
+      if (pendingPromises.length >= parallelChunks) {
+        const resolved = await Promise.all(pendingPromises);
+        chunks.push(...resolved);
+        pendingPromises = [];
+      }
+    }
+
+    if (pendingPromises.length > 0) {
+      const resolved = await Promise.all(pendingPromises);
+      chunks.push(...resolved);
     }
 
     const filename = (fileOrBlob.name || "encrypted") + ".asym-encrypted";
@@ -418,7 +431,8 @@ export class WebCryptAsym {
   // Max encrypted data size for single-buffer operations (1GB threshold)
   static MAX_ENCRYPTED_DATA_SIZE = 1024 * 1024 * 1024;
 
-  async decryptFile(fileOrBlob, privateKey) {
+  async decryptFile(fileOrBlob, privateKey, options = {}) {
+    const parallelChunks = options.parallelChunks || 1;
     // DoS protection: Check file size before loading into memory
     const fileSize = fileOrBlob.size || (fileOrBlob.blob && fileOrBlob.blob.size);
     if (fileSize && fileSize > WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
@@ -458,6 +472,7 @@ export class WebCryptAsym {
     const chunks = [];
     let offset = 0;
     let counter = 0;
+    let pendingPromises = [];
 
     while (offset < ciphertext.byteLength) {
       const size = Math.min(WebCryptAsym.CHUNK_SIZE, ciphertext.byteLength - offset);
@@ -467,13 +482,24 @@ export class WebCryptAsym {
       iv.set(baseIv);
       new DataView(iv.buffer).setUint32(WebCryptAsym.IV_LENGTH - 4, counter++, true);
 
-      const decrypted = await this._crypto.subtle.decrypt(
+      const promise = this._crypto.subtle.decrypt(
         { name: WebCryptAsym.AES_ALGORITHM, iv },
         aesKey,
         chunk
       );
-      chunks.push(decrypted);
+      pendingPromises.push(promise);
       offset += size;
+
+      if (pendingPromises.length >= parallelChunks) {
+        const resolved = await Promise.all(pendingPromises);
+        chunks.push(...resolved);
+        pendingPromises = [];
+      }
+    }
+
+    if (pendingPromises.length > 0) {
+      const resolved = await Promise.all(pendingPromises);
+      chunks.push(...resolved);
     }
 
     const filename = (fileOrBlob.name || fileOrBlob.filename || "decrypted").replace(

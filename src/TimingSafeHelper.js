@@ -61,13 +61,13 @@ class TimingSafeHelper {
   }
 
   /**
-   * Execute dummy operations to pad execution time and prevent timing attacks
-   * Uses non-blocking async timers to prevent CPU thread lockup.
-   * @param {number} minMs - Minimum milliseconds to delay (e.g., 5-10ms)
+   * Delay execution for a minimum time window to prevent timing attacks.
+   * If startTime is provided, calculates elapsed time since startTime and sleeps for the remainder.
+   * @param {number} minMs - Target minimum total execution time in milliseconds (default: 10ms)
+   * @param {number|null} [startTime=null] - Optional performance.now() timestamp from start of operation
    */
-  static async sleepWithDummyOps(minMs = 10) {
-    const startTime = performance.now();
-    const elapsed = performance.now() - startTime;
+  static async sleepWithDummyOps(minMs = 10, startTime = null) {
+    const elapsed = startTime !== null ? performance.now() - startTime : 0;
     const remaining = minMs - elapsed;
 
     if (remaining > 0) {

@@ -4,7 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/webcrypt)](https://www.npmjs.com/package/webcrypt)
 [![license](https://img.shields.io/npm/l/webcrypt)](./LICENSE)
-[![tests](https://img.shields.io/badge/tests-185%20passed-brightgreen)](./__tests__)
+[![tests](https://img.shields.io/badge/tests-191%20passed-brightgreen)](./__tests__)
 [![coverage](https://img.shields.io/badge/coverage-91%25-brightgreen)](./__tests__)
 
 AES-256-GCM symmetric encryption, RSA-4096 hybrid asymmetric encryption, ECDH key agreement, digital signatures, JWE compact serialization (RFC 7516), and WebRTC insertable streams — built natively for browser and Node.js Web Crypto API environments.
@@ -13,7 +13,7 @@ AES-256-GCM symmetric encryption, RSA-4096 hybrid asymmetric encryption, ECDH ke
 
 ## Interactive Live Demo & Documentation
 
-- 🚀 **[Try WebCrypt Live Playground](https://lucasarmstrong.github.io/WebCrypt/)**: Test AES-256, RSA-4096, ECDH, digital signatures, and file encryption directly in your browser.
+- 🚀 **[Try WebCrypt Live Playground](https://putervision.github.io/WebCrypt/)**: Test AES-256, RSA-4096, ECDH, digital signatures, and file encryption directly in your browser.
 - 📚 **[Documentation Index](./docs/)**
 
 ---
@@ -62,14 +62,18 @@ const decrypted = await wca.decryptText(encrypted, keys.privateKey);
 const aliceKeys = await wca.generateECDHKeyPair("P-256");
 const bobKeys = await wca.generateECDHKeyPair("P-256");
 
-const encrypted = await wca.encryptWithECDH("Confidential data", bobKeys.publicKey);
+const encrypted = await wca.encryptWithECDH(
+  "Confidential data",
+  aliceKeys.privateKey,
+  bobKeys.publicKey
+);
 const decrypted = await wca.decryptWithECDH(encrypted, bobKeys.privateKey, aliceKeys.publicKey);
 ```
 
-### 5. Digital Signatures (ECDSA P-256 / RSA-PSS)
+### 5. Digital Signatures (ECDSA P-256 / P-384)
 
 ```js
-const signingKeys = await wca.generateSigningKeyPair("ECDSA", "P-256");
+const signingKeys = await wca.generateSigningKeyPair("P-256");
 const signature = await wca.signText("Tamper-proof payload", signingKeys.privateKey);
 const isValid = await wca.verifyText("Tamper-proof payload", signature, signingKeys.publicKey);
 ```

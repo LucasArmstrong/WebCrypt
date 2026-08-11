@@ -46,7 +46,7 @@
   <main class="container">
     <!-- Hero Section -->
     <section class="hero">
-      <span class="badge">RELEASE v0.7.0 • ZERO DEPENDENCIES • PURE WEB CRYPTO API</span>
+      <span class="badge">RELEASE v0.8.0 • ZERO DEPENDENCIES • PURE WEB CRYPTO API</span>
       <h1>Zero-Dependency Web Cryptography Suite</h1>
       <p>High-performance AES-256-GCM encryption for text, files, and WebRTC E2EE insertable streams. Built natively for browser and Node.js Web Crypto environments.</p>
       
@@ -348,13 +348,13 @@ console.<span class="fn">log</span>(decryptedText); <span class="cm">// "Confide
             </tr>
             <tr style="border-bottom: 1px solid var(--border-color);">
               <td style="padding: 0.75rem; font-weight: 600;">`WebCryptAsym`</td>
-              <td style="padding: 0.75rem;">`encryptWithECDH(text, recipientPublicKey)`</td>
+              <td style="padding: 0.75rem;">`encryptWithECDH(text, senderPrivateKey, recipientPublicKey)`</td>
               <td style="padding: 0.75rem;">One-step ECDH public-key encryption.</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border-color);">
               <td style="padding: 0.75rem; font-weight: 600;">`WebCryptAsym`</td>
               <td style="padding: 0.75rem;">`signText(text, privateKey)`</td>
-              <td style="padding: 0.75rem;">Digital signature creation using ECDSA P-256 or RSA-PSS.</td>
+              <td style="padding: 0.75rem;">Digital signature creation using ECDSA P-256 or P-384.</td>
             </tr>
             <tr style="border-bottom: 1px solid var(--border-color);">
               <td style="padding: 0.75rem; font-weight: 600;">`WebCryptAsym`</td>

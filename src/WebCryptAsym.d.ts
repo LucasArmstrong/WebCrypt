@@ -148,7 +148,8 @@ declare class WebCryptAsym {
    */
   encryptFile(
     fileOrBlob: Blob | File,
-    publicKey: CryptoKey
+    publicKey: CryptoKey,
+    options?: { parallelChunks?: number }
   ): Promise<{ blob: Blob; filename: string }>;
 
   /**
@@ -157,7 +158,8 @@ declare class WebCryptAsym {
    */
   decryptFile(
     fileOrBlob: Blob | File,
-    privateKey: CryptoKey
+    privateKey: CryptoKey,
+    options?: { parallelChunks?: number }
   ): Promise<{ blob: Blob; filename: string }>;
 
   /**

@@ -22,11 +22,8 @@ The `WebCrypt` class provides zero-dependency symmetric encryption using **AES-2
 ```js
 import { WebCrypt } from "webcrypt";
 
-// Default instance
+// Instantiation
 const wc = new WebCrypt();
-
-// Custom key cache max size
-const wcCustom = new WebCrypt({ maxCacheSize: 50 });
 ```
 
 ---
@@ -103,7 +100,7 @@ Encrypts a `File` or `Blob` in constant-memory 8MB chunks using windowed paralle
   - `fileOrBlob` _(File|Blob)_: Target file/blob.
   - `password` _(string)_: Encryption password.
   - `options` _(Object, optional)_:
-    - `parallelChunks` _(number)_: Number of parallel chunk promises (default: 4).
+    - `parallelChunks` _(number)_: Number of parallel chunk promises (default: 1).
 - **Returns:** `Promise<{ blob: Blob, filename: string }>`
 
 ```js

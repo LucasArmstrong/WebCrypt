@@ -79,12 +79,12 @@ Derives an AES-GCM 256-bit shared key via ECDH key agreement.
 const sharedKey = await wca.deriveECDHSharedSecret(aliceKeys.privateKey, bobKeys.publicKey);
 ```
 
-### `encryptWithECDH(payload, recipientPublicKey)` / `decryptWithECDH(b64, recipientPrivateKey, senderPublicKey)`
+### `encryptWithECDH(payload, senderPrivateKey, recipientPublicKey)` / `decryptWithECDH(b64, recipientPrivateKey, senderPublicKey)`
 
 One-step ECDH public-key encryption and decryption.
 
 ```js
-const encrypted = await wca.encryptWithECDH("ECDH Secret", bobKeys.publicKey);
+const encrypted = await wca.encryptWithECDH("ECDH Secret", aliceKeys.privateKey, bobKeys.publicKey);
 const decrypted = await wca.decryptWithECDH(encrypted, bobKeys.privateKey, aliceKeys.publicKey);
 ```
 
@@ -92,13 +92,12 @@ const decrypted = await wca.decryptWithECDH(encrypted, bobKeys.privateKey, alice
 
 ## Digital Signatures
 
-### `generateSigningKeyPair(algorithm, curveOrModulus)`
+### `generateSigningKeyPair(curve = "P-256")`
 
-Generates digital signing key pair (ECDSA P-256/P-384 or RSA-PSS 4096).
+Generates ECDSA digital signing key pair (P-256 or P-384).
 
 ```js
-const ecdsaKeys = await wca.generateSigningKeyPair("ECDSA", "P-256");
-const rsaKeys = await wca.generateSigningKeyPair("RSA-PSS", 4096);
+const ecdsaKeys = await wca.generateSigningKeyPair("P-256");
 ```
 
 ### `signText(text, privateKey)` / `verifyText(text, signatureB64, publicKey)`
@@ -134,12 +133,12 @@ const payload = await wca.decryptJWE(jweToken, rsaKeys.privateKey);
 
 ## Key Derivation (HKDF / PBKDF2 / SHA-3)
 
-### `deriveKeyHKDF(secret, salt, info, keyLength)`
+### `deriveKeyHKDFSHA2(secret, salt, info, keyLength)`
 
 Derives a key using HKDF-SHA256 (RFC 5869).
 
 ```js
-const hkdfKey = await wca.deriveKeyHKDF(masterSecret, salt, "app-context", 256);
+const hkdfKey = await wca.deriveKeyHKDFSHA2(masterSecret, salt, "app-context", 256);
 ```
 
 ### `deriveKeyHKDFSHA3(secret, salt, info, keyLength)`
@@ -164,22 +163,22 @@ const childKey = await wca.deriveChildKeyHierarchical(parentKey, salt, "file-enc
 
 ---
 
-## PEM & JWK Key Export / Import
+## Key Export / Import (SPKI / PKCS#8 Base64)
 
-### `exportPublicKeyToPEM(publicKey)` / `importPublicKeyFromPEM(pem)`
+### `exportPublicKey(publicKey)` / `importPublicKey(b64Key)`
 
-Exports and imports public keys in standard PKCS#8 / SPKI PEM format.
+Exports and imports RSA/ECDH public keys in Base64 SPKI format.
 
 ```js
-const pemString = await wca.exportPublicKeyToPEM(keys.publicKey);
-const importedKey = await wca.importPublicKeyFromPEM(pemString);
+const pubB64 = await wca.exportPublicKey(rsaKeys.publicKey);
+const importedPub = await wca.importPublicKey(pubB64);
 ```
 
-### `exportKeyToJWK(key)` / `importKeyFromJWK(jwk, algorithm)`
+### `exportPrivateKey(privateKey)` / `importPrivateKey(b64Key)`
 
-Exports and imports keys in JSON Web Key (JWK, RFC 7517) format.
+Exports and imports RSA/ECDH private keys in Base64 PKCS#8 format.
 
 ```js
-const jwk = await wca.exportKeyToJWK(keys.publicKey);
-const key = await wca.importKeyFromJWK(jwk, { name: "RSA-OAEP", hash: "SHA-256" });
+const privB64 = await wca.exportPrivateKey(rsaKeys.privateKey);
+const importedPriv = await wca.importPrivateKey(privB64);
 ```

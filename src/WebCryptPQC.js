@@ -1,6 +1,6 @@
 // src/WebCryptPQC.js
 // Post-Quantum Cryptography (PQC) module - provides NIST-selected algorithms
-// version: 0.7.0 - Quantum-resist core
+// version: 0.8.0 - Quantum-resist core
 
 /**
  * WebCryptPQC – Post-quantum key exchange and digital signatures
@@ -35,14 +35,14 @@ export class WebCryptPQC {
     "Kyber and Dilithium are NOT real PQC - they use SHA-3 hashing stubs. " +
     "Not suitable for production security. Integrate liboqs-js or wait for official implementation.";
 
-  static _STUB_MODE = true;
+  static _STUB_BLOCKED = true;
 
   /**
-   * Programmatically check if PQC module is running in stub mode.
-   * @returns {boolean} True if PQC module is a placeholder stub.
+   * Programmatically check if PQC operations are currently blocked by default.
+   * @returns {boolean} True if PQC stub operations are blocked.
    */
   static isStub() {
-    return WebCryptPQC._STUB_MODE;
+    return WebCryptPQC._STUB_BLOCKED;
   }
 
   /**
@@ -50,14 +50,14 @@ export class WebCryptPQC {
    * @param {boolean} [allow=true] If true, allows stub operations for testing purposes.
    */
   static enableStubTesting(allow = true) {
-    WebCryptPQC._STUB_MODE = !allow;
+    WebCryptPQC._STUB_BLOCKED = !allow;
   }
 
   /**
    * Internal helper to verify stub mode state before PQC operations.
    */
   _checkStubMode() {
-    if (WebCryptPQC._STUB_MODE) {
+    if (WebCryptPQC._STUB_BLOCKED) {
       throw new Error(
         "WebCryptPQC is a placeholder stub — not for production use. Call WebCryptPQC.enableStubTesting(true) for testing."
       );

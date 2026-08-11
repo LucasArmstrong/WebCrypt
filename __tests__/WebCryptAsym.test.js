@@ -529,5 +529,21 @@ describe("WebCryptAsym", () => {
       const decrypted = await crypt.decryptData(encrypted, rsaKeyPair.privateKey);
       expect(decrypted).toEqual(data);
     });
+
+    test("encryptFile() and decryptFile() with parallelChunks option", async () => {
+      const testFile = new Blob(["Parallel chunking test content for WebCryptAsym streaming."], {
+        type: "text/plain",
+      });
+      const { blob: encBlob, filename } = await crypt.encryptFile(testFile, rsaKeyPair.publicKey, {
+        parallelChunks: 2,
+      });
+      expect(filename).toContain(".asym-encrypted");
+
+      const { blob: decBlob } = await crypt.decryptFile(encBlob, rsaKeyPair.privateKey, {
+        parallelChunks: 2,
+      });
+      const decText = await decBlob.text();
+      expect(decText).toBe("Parallel chunking test content for WebCryptAsym streaming.");
+    });
   });
 });

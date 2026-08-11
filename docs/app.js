@@ -36,7 +36,7 @@ function initTabNavigation() {
 // ────────────────────── Utility Helpers ──────────────────────
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
-  const CHUNK_SIZE = 1024;
+  const CHUNK_SIZE = 32768;
   let binary = "";
   for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
     binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));

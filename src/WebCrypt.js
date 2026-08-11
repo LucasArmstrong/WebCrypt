@@ -1,5 +1,5 @@
 // src/WebCrypt.js
-// version: 0.7.0
+// version: 0.8.0
 
 /**
  * WebCrypt — Password-based symmetric encryption using AES-256-GCM.
@@ -618,7 +618,7 @@ export class WebCrypt {
     const crypto = this._getCrypto();
     const dataBuffer = typeof data === "string" ? new TextEncoder().encode(data) : data;
     const signature = await crypto.subtle.sign("HMAC", key, dataBuffer);
-    return btoa(String.fromCharCode(...new Uint8Array(signature)));
+    return this._arrayBufferToBase64(signature);
   }
 
   /**

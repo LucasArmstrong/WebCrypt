@@ -26,4 +26,11 @@ describe("TimingSafeHelper Full Coverage", () => {
       "KDF Error"
     );
   });
+
+  test("sleepWithDummyOps with startTime timestamp parameter", async () => {
+    const start = performance.now();
+    await TimingSafeHelper.sleepWithDummyOps(15, start);
+    const elapsed = performance.now() - start;
+    expect(elapsed).toBeGreaterThanOrEqual(10);
+  });
 });

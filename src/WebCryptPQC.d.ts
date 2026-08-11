@@ -65,6 +65,8 @@ declare class WebCryptPQC {
   /**
    * Supported Dilithium levels
    */
+  static readonly SUPPORTED_DILITHIUM_LEVELS: string[];
+
   /**
    * Returns true if PQC module is running as a placeholder/stub.
    */
