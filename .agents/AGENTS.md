@@ -44,12 +44,14 @@ To allow cache query and ingestion commands to run automatically without prompti
 - **VS Code / Cursor IDE (`settings.json`)**: Ensure the agent has execution permissions for `command(vision-memory-mcp)` and read/write access to the workspace's local `.vision-memory-mcp/` cache directory.
 
 <!-- state-memory-mcp:start -->
+
 # Workflow State Memory (state-memory-mcp)
 
 This project uses `state-memory-mcp` with project slug `"webcrypt"` to track tasks, decisions, blockers, and progress.
 ALWAYS update the state graph when performing work.
 
 ## Mandatory Workflow
+
 1. **Start of session**: Call `start_session(agent_id: "...")`, then run `get_project_summary` and `next_tasks` BEFORE any coding.
 2. **Before work**: Create or find the task node, set status to `in_progress`.
 3. **During work**: Log decisions (`add_node type: decision`), blockers (`add_node type: blocker`), and notes (`add_note`).
@@ -60,6 +62,7 @@ ALWAYS update the state graph when performing work.
 5. **After work**: Run `validate_graph`, set task status to `done`, create artifact nodes, and call `end_session`.
 
 ## Tool Priority Order
+
 1. `start_session` — track all mutations under a unique session
 2. `get_project_summary` — current state and progress
 3. `next_tasks` — query prioritized runnable tasks
@@ -69,16 +72,20 @@ ALWAYS update the state graph when performing work.
 7. `export_joint_trajectories` — export interleaved state + vision logs
 
 ## Node Types
+
 `task`, `decision`, `artifact`, `plan`, `milestone`, `blocker`, `observation`, `visual_state`
 
 ## Edge Types
+
 `depends_on`, `blocks`, `produces`, `references`, `updates`, `contradicts`, `part_of`, `child_of`, `implements`, `decided_in`, `renders_state`, `blocked_by_visual_state`, `verifies_visual_state`
 
 ## Quick Reference
+
 - **Batch updates**: `batch_update(ids: [...], status: "done")`
 - **Quick notes**: `add_note(text: "...", attach_to: node_id)`
 - **Synergy metrics**: `get_synergy_metrics()`
 - **What changed**: `what_changed(since: "2h")` or `what_changed(session_id: "...")`
 
 > For the complete tool reference and workflow patterns, see the `state-memory-mcp` skill in `.agents/skills/state-memory-mcp/SKILL.md`.
+
 <!-- state-memory-mcp:end -->
