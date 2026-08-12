@@ -12,7 +12,6 @@ This skill provides step-by-step guidance, best practices, and operational patte
 ## 1. When to Use Video Ingestion
 
 Use video ingestion whenever you encounter:
-
 - **E2E Playwright / Cypress / Selenium Test Artifacts**: Recorded `.webm` screenchunks or `.mp4` test run videos.
 - **Bug Reproduction Videos**: User-uploaded screen recordings demonstrating UI glitches or crashes.
 - **UI Walkthrough Recordings**: Demonstrations of complex multi-step user workflows.
@@ -22,12 +21,12 @@ Use video ingestion whenever you encounter:
 
 ## 2. Ingestion Strategies & Parameter Tuning
 
-| Scenario                                          | Recommended Parameters               | Why                                                                                                                                       |
-| ------------------------------------------------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Action Event Timestamps** _(Highest Precision)_ | `action_timestamps: [1.2, 3.5, 7.0]` | Samples keyframes at exact interaction timestamps (clicks, types, navigation events) from test runners or state-memory logs.              |
-| **Dynamic UI / Animations**                       | `scene_threshold: 0.3`, `fps: 1`     | Combines scene-change detection (`gt(scene,0.3)`) with 1 fps background sampling to capture major screen transitions without frame bloat. |
-| **High-Speed Test Runs**                          | `fps: 2` or `fps: 5`                 | Increases frame rate sampling for rapidly switching UI test steps.                                                                        |
-| **Long Screen Recordings**                        | `fps: 0.5`, `scene_threshold: 0.4`   | Lowers sampling rate to conserve storage while extracting unique keyframe states.                                                         |
+| Scenario | Recommended Parameters | Why |
+| -------- | ---------------------- | --- |
+| **Action Event Timestamps** *(Highest Precision)* | `action_timestamps: [1.2, 3.5, 7.0]` | Samples keyframes at exact interaction timestamps (clicks, types, navigation events) from test runners or state-memory logs. |
+| **Dynamic UI / Animations** | `scene_threshold: 0.3`, `fps: 1` | Combines scene-change detection (`gt(scene,0.3)`) with 1 fps background sampling to capture major screen transitions without frame bloat. |
+| **High-Speed Test Runs** | `fps: 2` or `fps: 5` | Increases frame rate sampling for rapidly switching UI test steps. |
+| **Long Screen Recordings** | `fps: 0.5`, `scene_threshold: 0.4` | Lowers sampling rate to conserve storage while extracting unique keyframe states. |
 
 ---
 
