@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.putervision/webcrypt",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "title": "WebCrypt MCP Server",
   "description": "Zero-dependency Web Crypto & AI Agent MCP Server (AES-256-GCM, RSA-4096, PQC, Signatures).",
   "publisher": "PuterVision",
@@ -12,9 +12,7 @@
     {
       "src": "https://putervision.github.io/webcrypt/webcrypt-icon.png",
       "mimeType": "image/png",
-      "sizes": [
-        "512x512"
-      ]
+      "sizes": ["512x512"]
     }
   ],
   "repository": {
@@ -29,14 +27,12 @@
     {
       "registryType": "npm",
       "identifier": "webcrypt",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "transport": {
         "type": "stdio"
       },
       "executable": "webcrypt",
-      "args": [
-        "mcp"
-      ]
+      "args": ["mcp"]
     }
   ]
 }

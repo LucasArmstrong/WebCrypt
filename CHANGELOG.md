@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-08-21
+
+### Changed & Fixed
+
+- **MCP Registry Metadata**: Added required `"mcpName": "io.github.putervision/webcrypt"` field in `package.json` for official Model Context Protocol registry compliance.
+- **Manifest Synchronization**: Synchronized `manifest.json`, `server.json`, and `glama.json` descriptions to `< 100` characters.
+- **CLI Reference Guide**: Added dedicated documentation [`docs/CLI.md`](docs/CLI.md) for global project scanning, health diagnostics, and terminal crypto utilities.
+
 ## [1.0.0] - 2026-08-21
 
 ### Major Milestone Release: AI Agent MCP Server, Multi-IDE Integration, Deterministic Streaming & Global Tooling Suite

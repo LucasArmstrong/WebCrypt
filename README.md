@@ -1,4 +1,4 @@
-# WebCrypt v1.0.0
+# WebCrypt v1.0.1
 
 **Zero-dependency Web Crypto & native AI Agent Tooling (MCP) for modern JavaScript.**
 

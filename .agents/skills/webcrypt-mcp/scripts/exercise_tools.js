@@ -104,7 +104,7 @@ async function run() {
     clientInfo: { name: "WebCryptSkillTestRunner", version: "1.0.0" },
   });
   assert(initRes.result.serverInfo.name === "webcrypt", "Server name is 'webcrypt'");
-  assert(initRes.result.serverInfo.version === "1.0.0", "Server version is '1.0.0'");
+  assert(initRes.result.serverInfo.version === "1.0.1", "Server version is '1.0.1'");
 
   // 2. Tools Discovery
   console.log("\n2. Tools Discovery (tools/list):");

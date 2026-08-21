@@ -1,6 +1,6 @@
 // src/WebCryptPQC.js
 // Post-Quantum Cryptography (PQC) module
-// version: 1.0.0 - Quantum-resist core
+// version: 1.0.1 - Quantum-resist core
 
 import { arrayBufferToBase64, base64ToArrayBuffer } from "./_base64.js";
 import { getCrypto } from "./_crypto.js";

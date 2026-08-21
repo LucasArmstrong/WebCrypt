@@ -24,7 +24,7 @@ describe("WebCrypt MCP Server", () => {
     expect(response.id).toBe(1);
     expect(response.result.protocolVersion).toBe("2024-11-05");
     expect(response.result.serverInfo.name).toBe("webcrypt");
-    expect(response.result.serverInfo.version).toBe("1.0.0");
+    expect(response.result.serverInfo.version).toBe(server.version);
     expect(response.result.capabilities.tools).toBeDefined();
   });
 

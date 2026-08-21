@@ -1,5 +1,5 @@
 // src/WebCrypt.js
-// version: 1.0.0
+// version: 1.0.1
 
 import { arrayBufferToBase64, base64ToArrayBuffer } from "./_base64.js";
 import { getCrypto } from "./_crypto.js";

@@ -8,7 +8,7 @@ import { handleToolCall } from "./handlers.js";
 export class WebCryptMCPServer {
   constructor(options = {}) {
     this.name = "webcrypt";
-    this.version = "1.0.0";
+    this.version = "1.0.1";
     this.tools = WEBCRYPT_MCP_TOOLS;
     this.in = options.stdin || process.stdin;
     this.out = options.stdout || process.stdout;

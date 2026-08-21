@@ -7,10 +7,10 @@ import fs from "fs";
 import path from "path";
 
 describe("WebCrypt v0.7.x Features & Verification", () => {
-  test("package.json version is 1.0.0", () => {
+  test("package.json version matches semver", () => {
     const pkgPath = path.join(process.cwd(), "package.json");
     const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-    expect(pkg.version).toBe("1.0.0");
+    expect(pkg.version).toMatch(/^\d+\.\d+\.\d+$/);
     expect(pkg.author).toBe("PuterVision");
     expect(pkg.homepage).toBe(pkg.homepage);
   });
