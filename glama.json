@@ -2,7 +2,7 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "name": "webcrypt",
   "title": "WebCrypt MCP Server",
-  "description": "Zero-dependency Web Cryptography & AI Agent Tooling Suite for AES-256-GCM symmetric encryption, RSA-4096 hybrid encryption, digital signatures, cryptographic hashes, and post-quantum cryptography.",
+  "description": "Zero-dependency Web Crypto & AI Agent MCP Server (AES-256-GCM, RSA-4096, PQC, Signatures).",
   "maintainers": ["putervision"],
   "author": "PuterVision",
   "license": "MIT",
