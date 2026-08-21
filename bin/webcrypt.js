@@ -9,7 +9,7 @@ const command = args[0];
 
 function printHelp() {
   console.log(`
-WebCrypt v1.0.0 — Zero-Dependency Cryptography & Agent Tooling Suite
+WebCrypt v1.0.1 — Zero-Dependency Cryptography & Agent Tooling Suite
 Maintained by PuterVision (https://putervision.com)
 
 Usage:
@@ -50,7 +50,7 @@ async function main() {
   }
 
   if (command === "--version" || command === "-v") {
-    console.log("webcrypt v1.0.0");
+    console.log("webcrypt v1.0.1");
     return;
   }
 

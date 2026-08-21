@@ -4,8 +4,8 @@
 
 | Version         | Supported               |
 | --------------- | ----------------------- |
-| 1.0.0 (Current) | ✅ Active support       |
-| < 1.0.0         | ❌ Legacy / unsupported |
+| 1.0.1 (Current) | ✅ Active support       |
+| < 1.0.1         | ❌ Legacy / unsupported |
 
 ## Reporting a Vulnerability
 

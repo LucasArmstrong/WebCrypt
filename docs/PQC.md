@@ -154,7 +154,7 @@ pqc.dilithiumPrivateKeyFromBase64(b64: string): Uint8Array
 ## Migration Path
 
 ```
-v1.0.0 (Current): Framework & MCP Tooling (`pqc_kem_sign`) → Integrate liboqs-js for production
+v1.0.1 (Current): Framework & MCP Tooling (`pqc_kem_sign`) → Integrate liboqs-js for production
 Future:           Native W3C Web Crypto PQC standards & liboqs-js engine integration
 2030+:            Pure lattice-based cryptography → Full quantum resistance
 ```

@@ -1,10 +1,10 @@
-# Security Fixes — WebCrypt v1.0.0 & Prior Releases
+# Security Fixes — WebCrypt v1.0.1 & Prior Releases
 
-This document details all security hardening changes introduced in v1.0.0 and prior releases.
+This document details all security hardening changes introduced in v1.0.1 and prior releases.
 
 ---
 
-## WebCrypt v1.0.0 Security Hardening & MCP Tool Suite Audit
+## WebCrypt v1.0.1 Security Hardening & MCP Tool Suite Audit
 
 - **MCP stdio Protocol Security**: Zero-dependency stdio JSON-RPC 2.0 transport with automatic error isolation, ensuring no sensitive plaintext or keys leak in exception stack traces.
 - **Key Usage Separation**: Strict separation between encryption keys (RSA-OAEP, ECDH) and signing keys (ECDSA, RSA-PSS) across both API and MCP tooling to prevent cross-protocol key reuse attacks.

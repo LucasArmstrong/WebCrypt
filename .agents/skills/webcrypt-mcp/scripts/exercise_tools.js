@@ -35,7 +35,7 @@ async function getMCPServerClass() {
 
 async function run() {
   console.log("=================================================================");
-  console.log("   WEBCRYPT MCP TOOL SUITE AUTOMATED EXERCISE RUNNER (v1.0.0)");
+  console.log("   WEBCRYPT MCP TOOL SUITE AUTOMATED EXERCISE RUNNER (v1.0.1)");
   console.log("=================================================================\n");
 
   const WebCryptMCPServer = await getMCPServerClass();

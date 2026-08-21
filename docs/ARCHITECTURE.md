@@ -44,7 +44,7 @@ Timing oracle attacks allow eavesdroppers to infer secrets by measuring microsec
 
 ## Model Context Protocol (MCP) AI Agent Architecture
 
-WebCrypt v1.0.0 introduces a zero-dependency **Model Context Protocol (MCP)** stdio server conforming to JSON-RPC 2.0 and specification `"2024-11-05"`.
+WebCrypt v1.0.1 introduces a zero-dependency **Model Context Protocol (MCP)** stdio server conforming to JSON-RPC 2.0 and specification `"2024-11-05"`.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
