@@ -9,6 +9,7 @@
     "type": "git",
     "url": "git+https://github.com/putervision/webcrypt.git"
   },
+  "mcpName": "io.github.putervision/webcrypt",
   "bugs": {
     "url": "https://github.com/putervision/webcrypt/issues"
   },
