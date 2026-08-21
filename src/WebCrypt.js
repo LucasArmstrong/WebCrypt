@@ -1,11 +1,14 @@
 // src/WebCrypt.js
-// version: 0.8.0
+// version: 1.0.0
+
+import { arrayBufferToBase64, base64ToArrayBuffer } from "./_base64.js";
+import { getCrypto } from "./_crypto.js";
 
 /**
  * WebCrypt — Password-based symmetric encryption using AES-256-GCM.
- * Maintained by PuterVision LLC (https://putervision.com).
+ * Maintained by PuterVision (https://putervision.com).
  *
- * DISCLAIMER: Provided "AS IS" without warranty of any kind. PuterVision LLC
+ * DISCLAIMER: Provided "AS IS" without warranty of any kind. PuterVision
  * disclaims all liability for data loss, security breaches, or misuse.
  *
  * Features:
@@ -133,19 +136,7 @@ export class WebCrypt {
   }
 
   _getCrypto() {
-    if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.subtle) {
-      return globalThis.crypto;
-    }
-    if (typeof require !== "undefined") {
-      try {
-        const { webcrypto } = require("node:crypto");
-        if (webcrypto && webcrypto.subtle) return webcrypto;
-      } catch (e) {}
-    }
-    if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.subtle) {
-      return globalThis.crypto;
-    }
-    throw new Error("Web Crypto API (crypto.subtle) is not available in this environment");
+    return getCrypto();
   }
 
   // Derives AES key using PBKDF2: High iterations ensure quantum-resistant key stretching
@@ -215,23 +206,11 @@ export class WebCrypt {
   // ────────────────────── Safe Base64 (stack-safe, high performance) ──────────────────────
   // Chunked conversion avoids stack overflow and O(N^2) memory churn on large buffers
   _arrayBufferToBase64(buffer) {
-    const bytes = new Uint8Array(buffer);
-    const CHUNK_SIZE = 32768; // 32KB chunks prevent call stack overflow on large buffers
-    let binary = "";
-    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
-      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
-    }
-    return btoa(binary);
+    return arrayBufferToBase64(buffer);
   }
 
   _base64ToArrayBuffer(base64) {
-    let padded = base64;
-    const mod = base64.length % 4;
-    if (mod > 0) {
-      padded += "=".repeat(4 - mod);
-    }
-    const bytes = Uint8Array.from(atob(padded), c => c.charCodeAt(0));
-    return bytes.buffer;
+    return base64ToArrayBuffer(base64);
   }
 
   // ────────────────────── Text Encryption (now safe for 10 MB+) ──────────────────────
@@ -244,12 +223,17 @@ export class WebCrypt {
    * @returns {Promise<string>} Base64-encoded string containing salt + IV + ciphertext
    */
   async encryptText(text, password) {
+    const cryptoInstance = this._getCrypto();
     const data = new TextEncoder().encode(text);
-    const salt = crypto.getRandomValues(new Uint8Array(WebCrypt.SALT_LENGTH));
-    const iv = crypto.getRandomValues(new Uint8Array(WebCrypt.IV_LENGTH));
+    const salt = cryptoInstance.getRandomValues(new Uint8Array(WebCrypt.SALT_LENGTH));
+    const iv = cryptoInstance.getRandomValues(new Uint8Array(WebCrypt.IV_LENGTH));
     const key = await this._deriveKey(password, salt);
 
-    const encrypted = await crypto.subtle.encrypt({ name: WebCrypt.ALGORITHM, iv }, key, data);
+    const encrypted = await cryptoInstance.subtle.encrypt(
+      { name: WebCrypt.ALGORITHM, iv },
+      key,
+      data
+    );
 
     const result = new Uint8Array(WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH + encrypted.byteLength);
     result.set(salt, 0);
@@ -272,6 +256,7 @@ export class WebCrypt {
    */
   async decryptText(b64, password) {
     try {
+      const cryptoInstance = this._getCrypto();
       const combined = new Uint8Array(this._base64ToArrayBuffer(b64));
 
       // DoS protection: Check size before processing
@@ -288,7 +273,7 @@ export class WebCrypt {
       const ciphertext = combined.slice(WebCrypt.SALT_LENGTH + WebCrypt.IV_LENGTH);
 
       const key = await this._deriveKey(password, salt);
-      const decrypted = await crypto.subtle.decrypt(
+      const decrypted = await cryptoInstance.subtle.decrypt(
         { name: WebCrypt.ALGORITHM, iv },
         key,
         ciphertext
@@ -305,14 +290,8 @@ export class WebCrypt {
 
   /**
    * Encrypt a File or Blob using streaming (constant memory usage).
-   * Each chunk is encrypted with a counter-derived IV for security.
-   *
-   * @param {File|Blob} fileOrBlob - File or Blob to encrypt
-   * @param {string} password - Encryption password
-   * @returns {Promise<{blob: Blob, filename: string}>} Encrypted blob and suggested filename
-   */
-  /**
-   * Encrypt a File or Blob using password-derived key.
+   * Plaintext is chunked into deterministic 8MB blocks, each encrypted with AES-256-GCM
+   * and a counter-derived IV.
    *
    * @param {File|Blob} fileOrBlob - File or Blob to encrypt
    * @param {string} password - Encryption password
@@ -321,8 +300,9 @@ export class WebCrypt {
    */
   async encryptFile(fileOrBlob, password, options = {}) {
     const parallelChunks = options.parallelChunks || 1;
-    const salt = crypto.getRandomValues(new Uint8Array(WebCrypt.SALT_LENGTH));
-    const baseIv = crypto.getRandomValues(new Uint8Array(WebCrypt.IV_LENGTH));
+    const cryptoInstance = this._getCrypto();
+    const salt = cryptoInstance.getRandomValues(new Uint8Array(WebCrypt.SALT_LENGTH));
+    const baseIv = cryptoInstance.getRandomValues(new Uint8Array(WebCrypt.IV_LENGTH));
     const key = await this._deriveKey(password, salt);
 
     const chunks = [];
@@ -330,22 +310,49 @@ export class WebCrypt {
     let counter = 0;
     let pendingPromises = [];
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    let buffer = new Uint8Array(0);
 
+    const encryptChunk = plaintextChunk => {
       const iv = new Uint8Array(WebCrypt.IV_LENGTH);
       iv.set(baseIv);
       new DataView(iv.buffer).setUint32(WebCrypt.IV_LENGTH - 4, counter++, true);
 
-      const promise = crypto.subtle.encrypt({ name: WebCrypt.ALGORITHM, iv }, key, value);
+      const promise = cryptoInstance.subtle.encrypt(
+        { name: WebCrypt.ALGORITHM, iv },
+        key,
+        plaintextChunk
+      );
       pendingPromises.push(promise);
+    };
 
-      if (pendingPromises.length >= parallelChunks) {
-        const resolved = await Promise.all(pendingPromises);
-        chunks.push(...resolved);
-        pendingPromises = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      if (buffer.length === 0) {
+        buffer = value instanceof Uint8Array ? value : new Uint8Array(value);
+      } else {
+        const newBuf = new Uint8Array(buffer.length + value.byteLength);
+        newBuf.set(buffer, 0);
+        newBuf.set(value instanceof Uint8Array ? value : new Uint8Array(value), buffer.length);
+        buffer = newBuf;
       }
+
+      while (buffer.length >= WebCrypt.CHUNK_SIZE) {
+        const chunk = buffer.subarray(0, WebCrypt.CHUNK_SIZE);
+        encryptChunk(chunk);
+        buffer = buffer.subarray(WebCrypt.CHUNK_SIZE);
+
+        if (pendingPromises.length >= parallelChunks) {
+          const resolved = await Promise.all(pendingPromises);
+          chunks.push(...resolved);
+          pendingPromises = [];
+        }
+      }
+    }
+
+    if (buffer.length > 0 || counter === 0) {
+      encryptChunk(buffer);
     }
 
     if (pendingPromises.length > 0) {
@@ -370,10 +377,11 @@ export class WebCrypt {
    * @param {string} password - Must match the password used for encryption
    * @param {Object} [options={}] - Optional options ({ parallelChunks: 1 })
    * @returns {Promise<{blob: Blob, filename: string}>} Decrypted blob and original filename
-   * @throws {Error} If password is wrong, file is corrupted, or file exceeds 10 MB
+   * @throws {Error} If password is wrong, file is corrupted, or file exceeds 1 GB
    */
   async decryptFile(fileOrBlob, password, options = {}) {
     const parallelChunks = options.parallelChunks || 1;
+    const cryptoInstance = this._getCrypto();
     // DoS protection: Check size before loading entire file into memory
     const fileSize = fileOrBlob.size || (fileOrBlob.blob && fileOrBlob.blob.size);
     if (fileSize && fileSize > WebCrypt.MAX_ENCRYPTED_DATA_SIZE) {
@@ -400,16 +408,17 @@ export class WebCrypt {
     let offset = 0,
       counter = 0;
     let pendingPromises = [];
+    const CIPHERTEXT_CHUNK_SIZE = WebCrypt.CHUNK_SIZE + 16; // AES-GCM 16-byte auth tag per chunk
 
     while (offset < ciphertext.byteLength) {
-      const size = Math.min(WebCrypt.CHUNK_SIZE, ciphertext.byteLength - offset);
-      const chunk = ciphertext.slice(offset, offset + size);
+      const size = Math.min(CIPHERTEXT_CHUNK_SIZE, ciphertext.byteLength - offset);
+      const chunk = ciphertext.subarray(offset, offset + size);
 
       const iv = new Uint8Array(WebCrypt.IV_LENGTH);
       iv.set(baseIv);
       new DataView(iv.buffer).setUint32(WebCrypt.IV_LENGTH - 4, counter++, true);
 
-      const promise = crypto.subtle.decrypt({ name: WebCrypt.ALGORITHM, iv }, key, chunk);
+      const promise = cryptoInstance.subtle.decrypt({ name: WebCrypt.ALGORITHM, iv }, key, chunk);
       pendingPromises.push(promise);
       offset += size;
 
@@ -437,10 +446,11 @@ export class WebCrypt {
    * @returns {Promise<Function>} Transform function for RTCRtpScriptTransform
    */
   async createEncryptTransform(password) {
+    const cryptoInstance = this._getCrypto();
     const key = await this._deriveKey(password, WebCrypt.WEBRTC_SALT);
     return async (frame, controller) => {
-      const iv = crypto.getRandomValues(new Uint8Array(WebCrypt.IV_LENGTH));
-      const encrypted = await crypto.subtle.encrypt(
+      const iv = cryptoInstance.getRandomValues(new Uint8Array(WebCrypt.IV_LENGTH));
+      const encrypted = await cryptoInstance.subtle.encrypt(
         { name: WebCrypt.ALGORITHM, iv },
         key,
         frame.data
@@ -461,13 +471,14 @@ export class WebCrypt {
    * @returns {Promise<Function>} Transform function for RTCRtpScriptTransform
    */
   async createDecryptTransform(password) {
+    const cryptoInstance = this._getCrypto();
     const key = await this._deriveKey(password, WebCrypt.WEBRTC_SALT);
     return async (frame, controller) => {
       if (frame.data.byteLength < WebCrypt.IV_LENGTH) return controller.enqueue(frame);
       const iv = frame.data.slice(0, WebCrypt.IV_LENGTH);
       const ciphertext = frame.data.slice(WebCrypt.IV_LENGTH);
       try {
-        const decrypted = await crypto.subtle.decrypt(
+        const decrypted = await cryptoInstance.subtle.decrypt(
           { name: WebCrypt.ALGORITHM, iv },
           key,
           ciphertext
@@ -675,8 +686,8 @@ export class WebCrypt {
   /**
    * Utility to generate a cryptographically secure random password or key string.
    * Useful for generating strong unique keys for encryption passes.
-   * @param {number} length - Length of the generated password (default: 32)
-   * @returns {string} Base64-encoded random password
+   * @param {number} length - Length of the generated password in bytes (default: 32)
+   * @returns {string} Hex-encoded random password string
    */
   generateRandomPassword(length = 32) {
     const cryptoInstance = this._getCrypto();

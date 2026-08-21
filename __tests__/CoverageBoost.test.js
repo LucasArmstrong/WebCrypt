@@ -108,7 +108,8 @@ describe("WebCrypt Additional Coverage Boost", () => {
     const k1 = await wca.deriveKeyArgon2("secret", salt);
     expect(k1).toBeDefined();
 
-    await expect(wca.deriveKeyArgon2Enhanced("secret", salt)).rejects.toThrow();
+    const k2 = await wca.deriveKeyArgon2Enhanced("secret", salt);
+    expect(k2).toBeDefined();
   });
 
   test("WebCryptAsym JWE error branches and plain string payload", async () => {

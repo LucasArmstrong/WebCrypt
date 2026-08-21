@@ -1,12 +1,17 @@
 // src/WebCryptPQC.js
-// Post-Quantum Cryptography (PQC) module - provides NIST-selected algorithms
-// version: 0.8.0 - Quantum-resist core
+// Post-Quantum Cryptography (PQC) module
+// version: 1.0.0 - Quantum-resist core
+
+import { arrayBufferToBase64, base64ToArrayBuffer } from "./_base64.js";
+import { getCrypto } from "./_crypto.js";
+
+let warnedPQCStub = false;
 
 /**
  * WebCryptPQC – Post-quantum key exchange and digital signatures
- * Maintained by PuterVision LLC (https://putervision.com).
+ * Maintained by PuterVision (https://putervision.com).
  *
- * DISCLAIMER: Provided "AS IS" without warranty of any kind. PuterVision LLC
+ * DISCLAIMER: Provided "AS IS" without warranty of any kind. PuterVision
  * disclaims all liability for data loss, security breaches, or misuse.
  *
  * Implements NIST PQC finalists:
@@ -145,26 +150,15 @@ export class WebCryptPQC {
 
   constructor() {
     this._crypto = this._getCrypto();
-    // Warn users immediately about placeholder status
-    if (typeof console !== "undefined" && console.warn) {
+    // Warn users immediately about placeholder status (once per process)
+    if (!warnedPQCStub && typeof console !== "undefined" && console.warn) {
       console.warn(WebCryptPQC.WARNING);
+      warnedPQCStub = true;
     }
   }
 
   _getCrypto() {
-    if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.subtle) {
-      return globalThis.crypto;
-    }
-    if (typeof require !== "undefined") {
-      try {
-        const { webcrypto } = require("node:crypto");
-        if (webcrypto && webcrypto.subtle) return webcrypto;
-      } catch (e) {}
-    }
-    if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.subtle) {
-      return globalThis.crypto;
-    }
-    throw new Error("Web Crypto API (crypto.subtle) is not available in this environment");
+    return getCrypto();
   }
 
   // ═══════════════════════════ Kyber KEM (Key Encapsulation) ═══════════════════════════
@@ -208,16 +202,19 @@ export class WebCryptPQC {
     }
 
     // STUB: Call libOQS Kyber1024_encaps(pk) → (ss, ct)
-    // Placeholder: Hash public key to create deterministic ciphertext and shared secret
+    // Generate random 32-byte nonce
+    const nonce = this._crypto.getRandomValues(new Uint8Array(32));
     const hashInput = new Uint8Array(kyberPublicKey.byteLength + 32);
     hashInput.set(kyberPublicKey);
-    hashInput.set(this._crypto.getRandomValues(new Uint8Array(32)), kyberPublicKey.byteLength);
+    hashInput.set(nonce, kyberPublicKey.byteLength);
 
     const digest = await this._sha3Hash(hashInput, 256);
-    const ciphertext = new Uint8Array(params.ciphertextSize);
     const sharedSecret = digest.slice(0, params.sharedSecretSize);
 
-    ciphertext.set(digest.slice(0, params.ciphertextSize));
+    const ciphertext = new Uint8Array(params.ciphertextSize);
+    ciphertext.set(nonce, 0);
+    const ctHash = await this._sha3Hash(hashInput, 512);
+    ciphertext.set(ctHash.slice(0, Math.min(params.ciphertextSize - 32, ctHash.byteLength)), 32);
 
     return { ciphertext, sharedSecret };
   }
@@ -248,10 +245,14 @@ export class WebCryptPQC {
     }
 
     // STUB: Call libOQS Kyber1024_decaps(sk, ct) → ss
-    // Placeholder: Derive shared secret from private key and ciphertext using SHA-3
-    const hashInput = new Uint8Array(kyberPrivateKey.byteLength + ciphertext.byteLength);
-    hashInput.set(kyberPrivateKey);
-    hashInput.set(ciphertext, kyberPrivateKey.byteLength);
+    // Extract public key embedded in private key, and nonce from ciphertext
+    const pubKeyOffset = params.privateKeySize - params.publicKeySize;
+    const pubKey = kyberPrivateKey.slice(pubKeyOffset);
+    const nonce = ciphertext.slice(0, 32);
+
+    const hashInput = new Uint8Array(pubKey.byteLength + 32);
+    hashInput.set(pubKey);
+    hashInput.set(nonce, pubKey.byteLength);
 
     const digest = await this._sha3Hash(hashInput, 256);
     return digest.slice(0, params.sharedSecretSize);
@@ -378,54 +379,85 @@ export class WebCryptPQC {
    * @param {CryptoKey} rsaPublicKey - RSA-4096 public key (classical)
    * @param {Uint8Array} kyberPublicKey - Kyber public key (PQC)
    * @param {string} kyberLevel - Kyber level (default: Kyber768)
-   * @returns {Promise<{sharedSecret: Uint8Array, kyberCiphertext: Uint8Array, rsaWrappedSharedSecret: Uint8Array}>}
+   * @returns {Promise<{sharedSecret: Uint8Array, hybridSecret: Uint8Array, kyberCiphertext: Uint8Array, rsaWrappedSharedSecret: Uint8Array, combinedCiphertext: Object}>}
    */
   async hybridEncapsulate(rsaPublicKey, kyberPublicKey, kyberLevel = WebCryptPQC.KYBER_768) {
     // Step 1: Kyber encapsulation
     const { ciphertext: kyberCiphertext, sharedSecret: kyberSharedSecret } =
       await this.kyberEncapsulate(kyberPublicKey, kyberLevel);
 
-    // Step 2: Wrap Kyber shared secret with RSA-OAEP
+    // Step 2: Generate random ephemeral secret to wrap with RSA-OAEP
+    const rsaSecret = this._crypto.getRandomValues(new Uint8Array(32));
     const rsaWrappedSharedSecret = await this._crypto.subtle.encrypt(
       { name: "RSA-OAEP", hash: "SHA-256" },
       rsaPublicKey,
-      kyberSharedSecret
+      rsaSecret
     );
 
     // Step 3: Combine via KDF (SHA-3)
-    const combinedInput = new Uint8Array(
-      kyberSharedSecret.byteLength + rsaWrappedSharedSecret.byteLength
-    );
+    const combinedInput = new Uint8Array(kyberSharedSecret.byteLength + rsaSecret.byteLength);
     combinedInput.set(kyberSharedSecret);
-    combinedInput.set(new Uint8Array(rsaWrappedSharedSecret), kyberSharedSecret.byteLength);
+    combinedInput.set(rsaSecret, kyberSharedSecret.byteLength);
 
     const finalSharedSecret = await this._sha3Hash(combinedInput, 256);
 
+    const kyberCiphertextBytes = new Uint8Array(kyberCiphertext);
+    const rsaWrappedBytes = new Uint8Array(rsaWrappedSharedSecret);
+
     return {
       sharedSecret: finalSharedSecret,
-      kyberCiphertext: new Uint8Array(kyberCiphertext),
-      rsaWrappedSharedSecret: new Uint8Array(rsaWrappedSharedSecret),
+      hybridSecret: finalSharedSecret,
+      kyberCiphertext: kyberCiphertextBytes,
+      rsaWrappedSharedSecret: rsaWrappedBytes,
+      combinedCiphertext: {
+        kyberCiphertext: kyberCiphertextBytes,
+        rsaWrappedSharedSecret: rsaWrappedBytes,
+      },
     };
   }
 
   /**
    * Hybrid decapsulation: Recover shared secret using both Kyber and RSA private keys.
+   * Supports both 5-argument positional style or 4-argument combined-object style.
    *
-   * @param {Uint8Array} kyberCiphertext - From hybridEncapsulate
-   * @param {Uint8Array} rsaWrappedSharedSecret - From hybridEncapsulate
-   * @param {CryptoKey} rsaPrivateKey - RSA-4096 private key
-   * @param {Uint8Array} kyberPrivateKey - Kyber private key
-   * @param {string} kyberLevel - Kyber level (default: Kyber768)
+   * @param {Uint8Array|Object} kyberCiphertextOrCombined - From hybridEncapsulate
+   * @param {Uint8Array|CryptoKey} rsaWrappedSharedSecretOrRsaPrivKey - From hybridEncapsulate or RSA private key
+   * @param {CryptoKey|Uint8Array} rsaPrivateKeyOrKyberPrivKey - RSA private key or Kyber private key
+   * @param {Uint8Array|string} [kyberPrivateKeyOrLevel] - Kyber private key or Kyber level
+   * @param {string} [maybeKyberLevel='Kyber768'] - Kyber level (default: Kyber768)
    * @returns {Promise<Uint8Array>} The hybrid shared secret
    */
   async hybridDecapsulate(
-    kyberCiphertext,
-    rsaWrappedSharedSecret,
-    rsaPrivateKey,
-    kyberPrivateKey,
-    kyberLevel = WebCryptPQC.KYBER_768
+    kyberCiphertextOrCombined,
+    rsaWrappedSharedSecretOrRsaPrivKey,
+    rsaPrivateKeyOrKyberPrivKey,
+    kyberPrivateKeyOrLevel,
+    maybeKyberLevel = WebCryptPQC.KYBER_768
   ) {
     try {
+      let kyberCiphertext;
+      let rsaWrappedSharedSecret;
+      let rsaPrivateKey;
+      let kyberPrivateKey;
+      let kyberLevel = WebCryptPQC.KYBER_768;
+
+      if (
+        typeof kyberCiphertextOrCombined === "object" &&
+        !(kyberCiphertextOrCombined instanceof Uint8Array)
+      ) {
+        kyberCiphertext = kyberCiphertextOrCombined.kyberCiphertext;
+        rsaWrappedSharedSecret = kyberCiphertextOrCombined.rsaWrappedSharedSecret;
+        rsaPrivateKey = rsaWrappedSharedSecretOrRsaPrivKey;
+        kyberPrivateKey = rsaPrivateKeyOrKyberPrivKey;
+        kyberLevel = kyberPrivateKeyOrLevel || WebCryptPQC.KYBER_768;
+      } else {
+        kyberCiphertext = kyberCiphertextOrCombined;
+        rsaWrappedSharedSecret = rsaWrappedSharedSecretOrRsaPrivKey;
+        rsaPrivateKey = rsaPrivateKeyOrKyberPrivKey;
+        kyberPrivateKey = kyberPrivateKeyOrLevel;
+        kyberLevel = maybeKyberLevel || WebCryptPQC.KYBER_768;
+      }
+
       // Step 1: Kyber decapsulation
       const kyberSharedSecret = await this.kyberDecapsulate(
         kyberCiphertext,
@@ -434,41 +466,36 @@ export class WebCryptPQC {
       );
 
       // Step 2: Unwrap via RSA-OAEP
-      let rsaSharedSecret;
+      let rsaSecret;
       try {
-        rsaSharedSecret = await this._crypto.subtle.decrypt(
+        const decrypted = await this._crypto.subtle.decrypt(
           { name: "RSA-OAEP", hash: "SHA-256" },
           rsaPrivateKey,
           rsaWrappedSharedSecret
         );
+        rsaSecret = new Uint8Array(decrypted);
       } catch (e) {
         // RSA decryption failed: use Kyber alone (forward secrecy maintained)
-        console.warn(
-          "Hybrid decapsulation: RSA decryption failed, falling back to Kyber shared secret"
-        );
-        rsaSharedSecret = kyberSharedSecret;
+        if (typeof console !== "undefined" && console.warn) {
+          console.warn(
+            "Hybrid decapsulation: RSA decryption failed, falling back to Kyber shared secret"
+          );
+        }
+        rsaSecret = kyberSharedSecret;
       }
 
       // Step 3: Combine sharedSecrets via KDF (SHA-3)
-      const rsaSecretBytes = !rsaSharedSecret
-        ? kyberSharedSecret
-        : rsaSharedSecret instanceof Uint8Array
-          ? rsaSharedSecret
-          : new Uint8Array(rsaSharedSecret);
-      const combinedInput = new Uint8Array(
-        kyberSharedSecret.byteLength + rsaSecretBytes.byteLength
-      );
+      const combinedInput = new Uint8Array(kyberSharedSecret.byteLength + rsaSecret.byteLength);
       combinedInput.set(kyberSharedSecret);
-      combinedInput.set(rsaSecretBytes, kyberSharedSecret.byteLength);
+      combinedInput.set(rsaSecret, kyberSharedSecret.byteLength);
 
-      const finalSharedSecret = await this._sha3Hash(combinedInput, 256);
-      return finalSharedSecret;
+      return await this._sha3Hash(combinedInput, 256);
     } catch (e) {
       throw new Error(`Hybrid decapsulation failed: ${e.message}`);
     }
   }
 
-  // ═══════════════════════════ SHA-3 Hashing ═══════════════════════════
+  static _warnedHashes = {};
 
   /**
    * Hash data using SHA-3 (post-quantum secure hash).
@@ -489,10 +516,11 @@ export class WebCryptPQC {
       // Fallback: Use SHA-256/512 (still quantum-resistant for these sizes)
       const fallbackAlgorithm =
         bitLength <= 256 ? "SHA-256" : bitLength <= 384 ? "SHA-384" : "SHA-512";
-      if (typeof console !== "undefined" && console.warn) {
+      if (!WebCryptPQC._warnedHashes[bitLength] && typeof console !== "undefined" && console.warn) {
         console.warn(
           `SHA3-${bitLength} not natively supported by Web Crypto, falling back to ${fallbackAlgorithm}`
         );
+        WebCryptPQC._warnedHashes[bitLength] = true;
       }
       const digest = await this._crypto.subtle.digest(fallbackAlgorithm, data);
       return new Uint8Array(digest).slice(0, bitLength / 8);
@@ -565,7 +593,11 @@ export class WebCryptPQC {
 
     new DataView(hashInput.buffer).setUint32(seed.byteLength, 1, true);
     const privHash = await this._sha3Hash(hashInput, 512);
-    privateKey.set(privHash.slice(0, Math.min(params.privateKeySize, privHash.byteLength)));
+    privateKey.set(
+      privHash.slice(0, Math.min(params.privateKeySize - params.publicKeySize, privHash.byteLength))
+    );
+    // Embed publicKey at end of privateKey for stub mode decapsulation compatibility (mirroring NIST ML-KEM sk structure)
+    privateKey.set(publicKey, params.privateKeySize - params.publicKeySize);
 
     return { publicKey, privateKey };
   }
@@ -593,25 +625,13 @@ export class WebCryptPQC {
     return { publicKey, privateKey };
   }
 
-  // Chunked block conversion avoids stack overflow and O(N^2) memory churn
+  // Safe Base64 helpers
   _arrayBufferToBase64(buffer) {
-    const bytes = new Uint8Array(buffer);
-    const CHUNK_SIZE = 32768; // 32KB chunks prevent call stack overflow on large buffers
-    let binary = "";
-    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
-      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
-    }
-    return btoa(binary);
+    return arrayBufferToBase64(buffer);
   }
 
   _base64ToArrayBuffer(base64) {
-    let padded = base64;
-    const mod = base64.length % 4;
-    if (mod > 0) {
-      padded += "=".repeat(4 - mod);
-    }
-    const bytes = Uint8Array.from(atob(padded), c => c.charCodeAt(0));
-    return bytes.buffer;
+    return base64ToArrayBuffer(base64);
   }
 }
 

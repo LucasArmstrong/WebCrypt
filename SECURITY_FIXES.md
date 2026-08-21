@@ -1,6 +1,16 @@
-# Security Fixes — WebCrypt v0.7.0 & Prior Releases
+# Security Fixes — WebCrypt v1.0.0 & Prior Releases
 
-This document details all security hardening changes introduced in v0.7.0 and prior releases.
+This document details all security hardening changes introduced in v1.0.0 and prior releases.
+
+---
+
+## WebCrypt v1.0.0 Security Hardening & MCP Tool Suite Audit
+
+- **MCP stdio Protocol Security**: Zero-dependency stdio JSON-RPC 2.0 transport with automatic error isolation, ensuring no sensitive plaintext or keys leak in exception stack traces.
+- **Key Usage Separation**: Strict separation between encryption keys (RSA-OAEP, ECDH) and signing keys (ECDSA, RSA-PSS) across both API and MCP tooling to prevent cross-protocol key reuse attacks.
+- **Timing-Safe Error Protection**: Constant-time verification comparisons and catch blocks on digital signature verification (`sign_verify` tool and `TimingSafeHelper`).
+- **Post-Quantum Guardrail Transport**: Clear visual warnings and stub-mode guards for Kyber and Dilithium operations across stdio JSON-RPC transport to prevent accidental production reliance on placeholder lattice algorithms.
+- **Constant Memory Streaming**: Streaming file encryption/decryption pipelines verified for constant memory footprint under multi-gigabyte payloads.
 
 ---
 

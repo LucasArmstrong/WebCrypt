@@ -197,3 +197,16 @@ const isValid = await wc.verifyHmac("message", tag, hmacKey);
 - `WebCrypt.SALT_LENGTH`: `16` (128 bits)
 - `WebCrypt.PBKDF2_ITERATIONS`: `600,000`
 - `WebCrypt.CHUNK_SIZE`: `8 * 1024 * 1024` (8MB)
+
+---
+
+## AI Agent MCP Tooling
+
+WebCrypt includes native Model Context Protocol (MCP) tooling exposing symmetric encryption to AI agents:
+
+- `encrypt_payload(mode: "symmetric" | "data", data: string | object, password: string)`
+- `decrypt_payload(mode: "symmetric" | "data", ciphertext: string, password: string)`
+- `crypto_hash(data: string, algorithm: "SHA-256" | "SHA-512" | "SHA3-256", encoding: "hex" | "base64")`
+- `sign_verify(action: "sign" | "verify", algorithm: "HMAC" | "HMAC-SHA3", data: string, password: string, signature?: string)`
+
+For full agent setup instructions, see [docs/MCP_IDE_SETUP.md](./MCP_IDE_SETUP.md).

@@ -6,7 +6,7 @@
 
 ## Limitation of Liability & Security Disclaimer
 
-WebCryptPQC is maintained by [PuterVision LLC](https://putervision.com) and provided "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+WebCryptPQC is maintained by [PuterVision](https://putervision.com) and provided "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
 
 IN NO EVENT SHALL PUTERVISION LLC, ITS AFFILIATES, OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
@@ -154,8 +154,8 @@ pqc.dilithiumPrivateKeyFromBase64(b64: string): Uint8Array
 ## Migration Path
 
 ```
-v0.7.0 (Current): Placeholder stubs → Integrate liboqs-js manually
-v0.7+ (Future):   Official liboqs-js integration → Production-ready PQC
+v1.0.0 (Current): Framework & MCP Tooling (`pqc_kem_sign`) → Integrate liboqs-js for production
+Future:           Native W3C Web Crypto PQC standards & liboqs-js engine integration
 2030+:            Pure lattice-based cryptography → Full quantum resistance
 ```
 
@@ -164,3 +164,20 @@ For production post-quantum needs today, integrate [liboqs-js](https://github.co
 ```bash
 npm install @openquantumsafe/libs
 ```
+
+---
+
+## AI Agent MCP Tooling (`pqc_kem_sign`)
+
+The WebCrypt MCP stdio server exposes post-quantum key encapsulation and signature tools to AI agents:
+
+- `generate_kyber_keypair`: Generates Kyber512/768/1024 base64 key pairs.
+- `kyber_encapsulate`: Encapsulates shared secret with recipient public key.
+- `kyber_decapsulate`: Decapsulates ciphertext using recipient private key.
+- `hybrid_encapsulate`: Dual RSA + Kyber hybrid key exchange.
+- `hybrid_decapsulate`: Recovers hybrid shared secret.
+- `generate_dilithium_keypair`: Generates Dilithium2/3/5 signing keys.
+- `dilithium_sign`: Generates post-quantum digital signature.
+- `dilithium_verify`: Verifies post-quantum signature against public key.
+
+For setup details across editors, see [docs/MCP_IDE_SETUP.md](./MCP_IDE_SETUP.md).

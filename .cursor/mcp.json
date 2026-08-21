@@ -17,6 +17,10 @@
       "env": {
         "STATE_MEMORY_MCP_PROJECT": "webcrypt"
       }
+    },
+    "webcrypt": {
+      "command": "npx",
+      "args": ["-y", "webcrypt", "mcp"]
     }
   }
 }

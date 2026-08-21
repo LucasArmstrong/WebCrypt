@@ -13,7 +13,7 @@ The `WebCryptAsym` class provides zero-dependency asymmetric cryptography includ
 - [JWE Compact Serialization (RFC 7516)](#jwe-compact-serialization-rfc-7516)
 - [Key Derivation (HKDF / PBKDF2 / SHA-3)](#key-derivation-hkdf--pbkdf2--sha-3)
 - [Hierarchical Key Derivation](#hierarchical-key-derivation)
-- [PEM & JWK Key Export / Import](#pem--jwk-key-export--import)
+- [Key Export / Import (SPKI / PKCS#8 Base64)](#key-export--import-spki--pkcs8-base64)
 
 ---
 
@@ -182,3 +182,17 @@ Exports and imports RSA/ECDH private keys in Base64 PKCS#8 format.
 const privB64 = await wca.exportPrivateKey(rsaKeys.privateKey);
 const importedPriv = await wca.importPrivateKey(privB64);
 ```
+
+---
+
+## AI Agent MCP Tooling
+
+WebCrypt includes native Model Context Protocol (MCP) tooling exposing asymmetric cryptography to AI agents:
+
+- `manage_keys(action: "generate", type: "rsa" | "ecdh" | "hmac" | "password", modulusLength?: 2048 | 4096, namedCurve?: "P-256" | "P-384")`
+- `encrypt_payload(mode: "asymmetric", data: string | object, public_key_jwk: object)`
+- `decrypt_payload(mode: "asymmetric", ciphertext: string, private_key_jwk: object)`
+- `sign_verify(action: "sign" | "verify", algorithm: "ECDSA" | "RSA-PSS", data: string, key_jwk: object, signature?: string)`
+- `pqc_kem_sign(action: "hybrid_encapsulate" | "hybrid_decapsulate", rsa_public_key_jwk?: object, rsa_private_key_jwk?: object, public_key_b64?: string, private_key_b64?: string)`
+
+For full agent setup instructions, see [docs/MCP_IDE_SETUP.md](./MCP_IDE_SETUP.md).

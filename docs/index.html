@@ -6,7 +6,7 @@
   <title>WebCrypt — Zero-Dependency AES-256-GCM & RSA Cryptography Suite</title>
   <meta name="description" content="Zero-dependency JavaScript AES-256-GCM encryption library for text, files & WebRTC E2EE. Pure Web Crypto API with OWASP-compliant PBKDF2 (600,000 iterations). Native for browser and Node.js Web Crypto environments.">
   <meta name="keywords" content="webcrypt, aes-256-gcm, cryptography, web crypto api, zero dependency, rsa-4096, hybrid encryption, e2ee, webrtc, browser encryption, post-quantum">
-  <meta name="author" content="PuterVision LLC (https://putervision.com)">
+  <meta name="author" content="PuterVision (https://putervision.com)">
   <meta name="theme-color" content="#0b0f19">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,6 +26,7 @@
     <nav aria-label="Main Navigation">
       <ul class="nav-links">
         <li><a href="#tools">Live Tools</a></li>
+        <li><a href="#mcp">AI Agent MCP</a></li>
         <li><a href="#features">Features</a></li>
         <li><a href="#quickstart">Quickstart</a></li>
         <li><a href="#security">Security & Legal</a></li>
@@ -46,12 +47,13 @@
   <main class="container">
     <!-- Hero Section -->
     <section class="hero">
-      <span class="badge">RELEASE v0.8.0 • ZERO DEPENDENCIES • PURE WEB CRYPTO API</span>
-      <h1>Zero-Dependency Web Cryptography Suite</h1>
-      <p>High-performance AES-256-GCM encryption for text, files, and WebRTC E2EE insertable streams. Built natively for browser and Node.js Web Crypto environments.</p>
+      <span class="badge">RELEASE v1.0.0 • AI AGENT MCP TOOLING • ZERO DEPENDENCIES • PURE WEB CRYPTO API</span>
+      <h1>Zero-Dependency Web Cryptography & AI Agent Tooling Suite</h1>
+      <p>High-performance AES-256-GCM encryption, RSA-4096 hybrid public keys, post-quantum KEM, and native Model Context Protocol (MCP) server for autonomous AI coding agents.</p>
       
       <div class="cta-group">
         <a href="#tools" class="btn-primary">Try Live Tools</a>
+        <a href="#mcp" class="btn-secondary">AI Agent MCP</a>
         <a href="#quickstart" class="btn-secondary">Code Quickstart</a>
         <a href="#features" class="btn-secondary">Explore Features</a>
       </div>
@@ -59,6 +61,12 @@
 
     <!-- Key Features Grid -->
     <section id="features" class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>AI Agent MCP Server</h3>
+        <p>Built-in stdio Model Context Protocol (MCP) server equipping AI coding agents with zero-config cryptographic vaults.</p>
+      </div>
+
       <div class="feature-card">
         <div class="feature-icon">🔒</div>
         <h3>AES-256-GCM Encryption</h3>
@@ -72,6 +80,12 @@
       </div>
 
       <div class="feature-card">
+        <div class="feature-icon">🧠</div>
+        <h3>PuterVision Triad Standard</h3>
+        <p>Seamlessly integrates with <code>state-memory-mcp</code> (workflow DAG) and <code>vision-memory-mcp</code> (visual cache).</p>
+      </div>
+
+      <div class="feature-card">
         <div class="feature-icon">📡</div>
         <h3>WebRTC E2EE Streams</h3>
         <p>Real-time video/audio media frame encryption using WebRTC Insertable Streams and transform streams.</p>
@@ -80,19 +94,7 @@
       <div class="feature-card">
         <div class="feature-icon">⚡</div>
         <h3>Zero Dependencies</h3>
-        <p>100% native Web Crypto API (`globalThis.crypto.subtle`) execution in Chrome, Edge, Firefox, Safari, and Node.js 18+.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">🛡️</div>
-        <h3>OWASP 2025+ Compliant</h3>
-        <p>Quantum-safe key derivation using PBKDF2 with 600,000 iterations and timing-attack resistant comparisons.</p>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">📁</div>
-        <h3>File & Stream Chunks</h3>
-        <p>Chunked file encryption with constant memory usage, streaming support, and automatic unref'd key caching.</p>
+        <p>100% native Web Crypto API (`globalThis.crypto.subtle`) execution across browsers and Node.js 18+.</p>
       </div>
     </section>
 
@@ -249,6 +251,99 @@
       </div>
     </section>
 
+    <!-- AI Agent Tooling (MCP) Section -->
+    <section id="mcp" class="card">
+      <div class="section-title">
+        <span class="badge">Model Context Protocol (MCP)</span>
+        <h2>Native AI Agent Tooling & Multi-IDE Integration</h2>
+      </div>
+      <p style="color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.6;">
+        WebCrypt includes a built-in, zero-dependency <strong>Model Context Protocol (MCP)</strong> stdio server that equips AI coding agents (Antigravity, Claude, Cursor, Copilot, Windsurf, Cline) with cryptographic vaults, digital signatures, and key management tools.
+      </p>
+
+      <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem;">
+        <h3 style="color: var(--accent-cyan); margin-bottom: 0.5rem; font-size: 1.1rem;">⚡ Quick Auto-Setup (Zero Manual Configuration)</h3>
+        <p style="color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 0.75rem;">Run inside any project to automatically scaffold IDE MCP configurations, agent skills, and rules:</p>
+        <div class="code-box" style="margin: 0; padding: 0.75rem 1rem;">
+<span class="cm"># Install globally and initialize your project</span>
+npm install -g webcrypt
+webcrypt init
+
+<span class="cm"># Verify environment and configuration health</span>
+webcrypt doctor
+        </div>
+      </div>
+
+      <h3 style="color: var(--accent-cyan); margin-bottom: 0.75rem;">Why AI Agents Need WebCrypt MCP</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+          <strong style="color: var(--accent-cyan); display: block; margin-bottom: 0.3rem;">🔐 Confidential Local Vault</strong>
+          <span style="font-size: 0.86rem; color: var(--text-secondary); line-height: 1.4; display: block;">Encrypts API keys, secrets, and task memory before disk writes to prevent prompt log leaks.</span>
+        </div>
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+          <strong style="color: var(--accent-indigo); display: block; margin-bottom: 0.3rem;">🛡️ Tamper-Proof Signing</strong>
+          <span style="font-size: 0.86rem; color: var(--text-secondary); line-height: 1.4; display: block;">Computes cryptographic ECDSA/HMAC signatures on build artifacts and test evidence packs.</span>
+        </div>
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+          <strong style="color: var(--accent-emerald); display: block; margin-bottom: 0.3rem;">🤝 Inter-Agent Key Exchange</strong>
+          <span style="font-size: 0.86rem; color: var(--text-secondary); line-height: 1.4; display: block;">Generates ephemeral JWK keypairs (RSA-4096 / ECDH) for private subagent communication.</span>
+        </div>
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem;">
+          <strong style="color: #fbbf24; display: block; margin-bottom: 0.3rem;">🧠 PuterVision Triad Standard</strong>
+          <span style="font-size: 0.86rem; color: var(--text-secondary); line-height: 1.4; display: block;">Seamless security layer for <code>state-memory-mcp</code> (workflow DAG) and <code>vision-memory-mcp</code> (visual cache).</span>
+        </div>
+      </div>
+
+      <h3 style="color: var(--accent-indigo); margin-bottom: 0.75rem;">Registered MCP Tools for AI Agents</h3>
+      <div style="overflow-x: auto; margin-bottom: 1.5rem;">
+        <table style="width: 100%; border-collapse: collapse; color: var(--text-primary); text-align: left; font-size: 0.9rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border-color); color: var(--accent-cyan);">
+              <th style="padding: 0.6rem;">Tool Name</th>
+              <th style="padding: 0.6rem;">Action / Mode</th>
+              <th style="padding: 0.6rem;">Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.6rem; font-weight: 600;">`encrypt_payload`</td>
+              <td style="padding: 0.6rem;">symmetric | asymmetric | data</td>
+              <td style="padding: 0.6rem;">Encrypts strings, JSON objects, or files with AES-256-GCM or RSA-4096.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.6rem; font-weight: 600;">`decrypt_payload`</td>
+              <td style="padding: 0.6rem;">symmetric | asymmetric | data</td>
+              <td style="padding: 0.6rem;">Decrypts ciphertext produced by WebCrypt back to plaintext or structured JSON.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.6rem; font-weight: 600;">`manage_keys`</td>
+              <td style="padding: 0.6rem;">generate (rsa, ecdh, hmac, password)</td>
+              <td style="padding: 0.6rem;">Generates JWK keypairs (RSA-4096, ECDH P-256/P-384) or high-entropy passwords.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.6rem; font-weight: 600;">`crypto_hash`</td>
+              <td style="padding: 0.6rem;">SHA-256 | SHA-512 | SHA-3</td>
+              <td style="padding: 0.6rem;">Computes cryptographic hash digests in hex or base64.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.6rem; font-weight: 600;">`sign_verify`</td>
+              <td style="padding: 0.6rem;">sign | verify (ECDSA, HMAC)</td>
+              <td style="padding: 0.6rem;">Signs and verifies messages, release hashes, and evidence packs.</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 0.6rem; font-weight: 600;">`pqc_kem_sign`</td>
+              <td style="padding: 0.6rem;">Kyber KEM | Dilithium | Hybrid</td>
+              <td style="padding: 0.6rem;">Post-quantum key encapsulation and lattice signatures.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="text-align: center; margin-top: 1rem;">
+        <a href="https://github.com/putervision/webcrypt/blob/main/docs/MCP_IDE_SETUP.md" target="_blank" rel="noopener noreferrer" class="btn-primary" style="display: inline-block; padding: 0.6rem 1.4rem;">📖 Read Complete Multi-IDE Setup Guide</a>
+      </div>
+    </section>
+
     <!-- Code Quickstart Section -->
     <section id="quickstart" class="card">
       <div class="section-title">
@@ -293,8 +388,13 @@ console.<span class="fn">log</span>(decryptedText); <span class="cm">// "Confide
 
       <h3 style="color: var(--accent-emerald); margin-top: 1.5rem; margin-bottom: 0.5rem;">3. Deterministic HMAC Authentication (SHA-256 / SHA-3)</h3>
       <div class="code-box">
+<span class="cm">// Generate HMAC key from password</span>
 <span class="kw">const</span> key = <span class="kw">await</span> crypt.<span class="fn">generateHmacKey</span>(<span class="str">"my-secret-password"</span>, <span class="str">"SHA-256"</span>);
+
+<span class="cm">// Compute signature tag</span>
 <span class="kw">const</span> tag = <span class="kw">await</span> crypt.<span class="fn">computeHmac</span>(<span class="str">"Message to sign"</span>, key);
+
+<span class="cm">// Verify signature</span>
 <span class="kw">const</span> isValid = <span class="kw">await</span> crypt.<span class="fn">verifyHmac</span>(<span class="str">"Message to sign"</span>, tag, key);
       </div>
     </section>
@@ -389,7 +489,7 @@ console.<span class="fn">log</span>(decryptedText); <span class="cm">// "Confide
       </div>
 
       <p style="text-align: center; color: var(--text-secondary); max-width: 750px; margin: 0 auto 1.5rem;">
-        WebCrypt is maintained by <a href="https://putervision.com" target="_blank" rel="noopener noreferrer" style="color: var(--accent-cyan); text-decoration: underline;">PuterVision LLC</a> and released under the MIT License.
+        WebCrypt is maintained by <a href="https://putervision.com" target="_blank" rel="noopener noreferrer" style="color: var(--accent-cyan); text-decoration: underline;">PuterVision</a> and released under the MIT License.
       </p>
 
       <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 1.25rem; font-size: 0.88rem; color: #fca5a5; line-height: 1.6;">
@@ -399,8 +499,8 @@ console.<span class="fn">log</span>(decryptedText); <span class="cm">// "Confide
     </section>
 
     <footer>
-      <p>© 2025-2026 <a href="https://putervision.com" target="_blank" rel="noopener noreferrer">PuterVision LLC</a>. Released under the MIT License.</p>
-      <p style="margin-top: 0.5rem; font-size: 0.82rem;">Pure Web Crypto API • Zero Dependencies • Local Execution • Maintained by <a href="https://putervision.com" target="_blank" rel="noopener noreferrer">PuterVision LLC</a></p>
+      <p>© 2025-2026 <a href="https://putervision.com" target="_blank" rel="noopener noreferrer">PuterVision</a>. Released under the MIT License.</p>
+      <p style="margin-top: 0.5rem; font-size: 0.82rem;">Pure Web Crypto API • Zero Dependencies • Local Execution • Maintained by <a href="https://putervision.com" target="_blank" rel="noopener noreferrer">PuterVision</a></p>
     </footer>
   </main>
   <script src="app.js"></script>

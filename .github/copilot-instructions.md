@@ -36,6 +36,8 @@ If the project was just initialized or is missing high-level structure (Plans, M
 2. **Scaffold the Roadmap**: Create a `plan` node (e.g., "Project Roadmap") and add `milestone` nodes representing key target phases, connecting them using `part_of` edges.
 3. **Scaffold Architecture**: Create `decision` nodes representing core technical choices (e.g., choice of databases, frameworks) and link them to the milestones/tasks using `decided_in` edges.
 
+<!-- vision-memory-mcp:start -->
+
 ## Visual Memory (vision-memory-mcp)
 
 This project utilizes `vision-memory-mcp` to cache visual states, record layout transitions, provide element grounding, and avoid repetitive LLM vision calls.
@@ -51,23 +53,22 @@ This project utilizes `vision-memory-mcp` to cache visual states, record layout 
 5. **Transitions**: Call `record_outcome` after every click/type/scroll action to construct navigation paths.
 6. **Privacy & Cleanup**: Call `forget_state` to purge sensitive or secret states from storage.
 
-### 2. Tool Reference Summary (22 Core MCP Tools)
+### 2. Tool Reference Summary (15 Core MCP Tools)
 
-- `analyze_screenshot`: Ingest screenshot, lookup cache, return layout description and grounded elements.
-- `recall_memory`: Search visual memory by description query or base64 image query.
-- `record_outcome`: Save UI action execution outcomes and transitions between states.
+- `analyze_screenshot`: Ingest screenshot(s) (single or batch via `items`), lookup cache, return layout description and grounded elements.
+- `recall_memory`: Search visual memory by description query or base64 image query (read-only).
+- `record_outcome`: Save UI action execution outcomes, transitions, or log visual blockers (`action_type: 'blocker'`).
 - `get_navigation_paths`: Find path between states using BFS navigation graph.
-- `compare_states`: Compare two visual states structurally and vector-semantically.
-- `get_session_context`: Fetch recent states, frequent states, and transitions.
-- `predict_next_action`: Predict best next UI action and target coordinates based on transition success rates.
-- `batch_analyze_screenshots`: Process multiple screenshots in a single batch call.
-- `set_visual_spec` / `verify_visual_spec` / `get_visual_diff`: UI compliance testing and mockup verification.
-- `save_visual_snapshot` / `diff_visual_snapshots`: Manage visual checkpoints and detect visual regression.
-- `undo_last_visual_mutation`: Revert accidental state or transition edge ingestions.
+- `predict_next_action`: Predict best next UI action and target coordinates based on transition success rates and AX tree grounding.
+- `compare_states`: Compare visual states structurally (`has_layout_change`) or compare video recordings (`video_a_id`/`video_b_id`).
+- `get_session_context`: Fetch aggregated visual context, recent/frequent states, transitions, cache hit ratios, token savings metrics, and server version info.
+- `manage_snapshot`: Unified snapshot management (`save`, `diff`, `export`, `restore`) for visual checkpoints and regression detection.
+- `manage_visual_spec`: Visual SDD design contract baseline registration (`set`), live verification (`verify`), and listing (`list`).
+- `manage_video`: Unified video memory operations for ingestion (`ingest`), semantic search (`search`), and keyframe timelines (`timeline`).
+- `create_evidence_pack`: Create cryptographic, multi-modal evidence pack linking video keyframes, state graph tasks, and visual proof.
+- `export_trajectories`: Export multimodal visual transitions and joint workflow trajectories (`json`, `llava`, `qwen2_vl`, `joint`).
+- `undo_visual_mutation`: Revert accidental state or transition edge ingestions.
 - `forget_state`: Purge a specific state and vector embedding from storage for privacy.
-- `export_visual_trajectories` / `export_joint_trajectories`: Export multimodal transition & joint workflow trajectories.
-- `get_metrics`: Query real-time cache hit ratios, latency metrics, and token-savings estimates.
-- `export_snapshot` / `restore_snapshot`: Export and restore full standalone snapshot archives.
 - `wait_for_visual_state`: Poll for target visual state until present or timeout occurs.
 
 #### 3. Agent Permissions & Auto-Run Configuration
@@ -79,6 +80,7 @@ To allow cache query and ingestion commands to run automatically without prompti
   - `"read_file(.*\\.gemini/antigravity/brain/.*)"` (Allow reading captured screenshots)
   - `"write_file(.*\\.gemini/antigravity/brain/.*)"` (Allow saving visual states)
 - **VS Code / Cursor IDE (`settings.json`)**: Ensure the agent has execution permissions for `command(vision-memory-mcp)` and read/write access to the workspace's local `.vision-memory-mcp/` cache directory.
+<!-- vision-memory-mcp:end -->
 
 ## State Memory (state-memory-mcp)
 
@@ -122,3 +124,20 @@ If the project was just initialized or is missing high-level structure (Plans, M
 1. **Inspect the Codebase**: Read the README and core files to understand the roadmap and architecture.
 2. **Scaffold the Roadmap**: Create a `plan` node (e.g., "Project Roadmap") and add `milestone` nodes representing key target phases, connecting them using `part_of` edges.
 3. **Scaffold Architecture**: Create `decision` nodes representing core technical choices (e.g., choice of databases, frameworks) and link them to the milestones/tasks using `decided_in` edges.
+
+<!-- webcrypt-mcp:start -->
+
+# Cryptographic Vault & Security (webcrypt-mcp)
+
+This project provides native `webcrypt-mcp` tooling for zero-dependency AES-256-GCM symmetric encryption, RSA-4096 hybrid public-key encryption, digital signatures, cryptographic hashes, and post-quantum cryptography.
+
+## Mandatory Workflow
+
+1. **Confidential Artifacts**: Whenever saving sensitive credentials, tokens, or private workflow states, encrypt them using `encrypt_payload(mode: "data", password: "...")` or `encrypt_payload(mode: "symmetric", password: "...")`.
+2. **Key Management**: Use `manage_keys(action: "generate", type: "rsa" | "ecdh" | "hmac")` to generate cryptographically strong JWK-formatted keys for inter-agent communication.
+3. **Integrity & Signatures**: Before completing tasks that produce verifiable evidence (such as evidence packs or release binaries), compute signatures or HMAC tags using `sign_verify(action: "sign", algorithm: "ECDSA" | "HMAC")`.
+4. **Triple Memory Triad**:
+   - `state-memory-mcp`: Workflow state tracking.
+   - `vision-memory-mcp`: Visual state caching.
+   - `webcrypt-mcp`: Local database vault encryption and evidence pack cryptographic signing.
+   <!-- webcrypt-mcp:end -->

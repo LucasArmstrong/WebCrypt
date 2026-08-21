@@ -1,10 +1,10 @@
 {
   "name": "webcrypt",
-  "version": "0.8.0",
-  "description": "Zero-dependency JavaScript AES-256-GCM encryption suite for text, files & WebRTC E2EE. Supports symmetric password derivation, RSA-4096 hybrid encryption, and post-quantum cryptography via pure Web Crypto API.",
+  "version": "1.0.0",
+  "description": "Zero-dependency JavaScript AES-256-GCM encryption suite for text, files, WebRTC E2EE & AI Agent Tooling (MCP). Supports symmetric password derivation, RSA-4096 hybrid encryption, and post-quantum cryptography via pure Web Crypto API.",
   "license": "MIT",
-  "author": "PuterVision LLC",
-  "homepage": "https://putervision.github.io/WebCrypt",
+  "author": "PuterVision",
+  "homepage": "https://putervision.github.io/webcrypt/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/putervision/webcrypt.git"
@@ -41,18 +41,34 @@
     "nodejs",
     "hmac",
     "jwe",
-    "json-web-encryption"
+    "json-web-encryption",
+    "mcp",
+    "model-context-protocol",
+    "ai-agent",
+    "ai-agents",
+    "security-vault",
+    "state-memory",
+    "putervision"
   ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "webcrypt": "./bin/webcrypt.js",
+    "webcrypt-mcp": "./bin/webcrypt-mcp.js"
+  },
   "sideEffects": false,
   "engines": {
     "node": ">=18.0.0"
   },
   "files": [
-    "dist"
+    "dist",
+    "bin",
+    "src",
+    "manifest.json",
+    "server.json",
+    "glama.json"
   ],
   "exports": {
     ".": {
@@ -86,6 +102,14 @@
       "module": "./dist/WebCryptPQC.js",
       "require": "./dist/WebCryptPQC.cjs",
       "default": "./dist/WebCryptPQC.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp/server.d.ts",
+      "import": "./dist/mcp/server.js",
+      "browser": "./dist/mcp/server.js",
+      "module": "./dist/mcp/server.js",
+      "require": "./dist/mcp/server.cjs",
+      "default": "./dist/mcp/server.js"
     }
   },
   "typesVersions": {
@@ -101,11 +125,15 @@
       ],
       "webcrypt-pqc": [
         "dist/WebCryptPQC.d.ts"
+      ],
+      "mcp": [
+        "dist/mcp/server.d.ts"
       ]
     }
   },
   "scripts": {
-    "build": "tsup src/index.js src/WebCrypt.js src/WebCryptAsym.js src/WebCryptPQC.js --format esm,cjs --dts --clean --no-splitting",
+    "build": "tsup src/index.js src/WebCrypt.js src/WebCryptAsym.js src/WebCryptPQC.js src/mcp/server.js --format esm,cjs --dts --clean --no-splitting",
+    "ci": "npm run lint && npm run test && npm run build",
     "test": "node --experimental-vm-modules node_modules/.bin/jest",
     "test:watch": "jest --watch",
     "test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
@@ -114,7 +142,7 @@
     "format:check": "prettier --check \"**/*.{js,ts,json,md}\"",
     "lint": "npm run format:check",
     "prepare": "if [ \"$NODE_ENV\" != \"development\" ]; then npm run build; fi",
-    "prepublishOnly": "npm run format:check",
+    "prepublishOnly": "npm run build && npm run format:check && npm test",
     "publish": "npm publish --access public"
   },
   "prettier": {

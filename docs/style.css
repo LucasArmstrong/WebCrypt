@@ -379,11 +379,14 @@ button.btn-toggle-desc:hover {
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1.25rem;
-  font-family: 'Fira Code', monospace;
+  font-family: 'Fira Code', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 0.9rem;
   color: #c9d1d9;
   overflow-x: auto;
   line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  tab-size: 2;
 }
 
 .code-box .kw { color: #ff7b72; }

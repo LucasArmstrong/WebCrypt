@@ -1,0 +1,24 @@
+{
+  "manifest_version": "0.2",
+  "name": "webcrypt",
+  "version": "1.0.0",
+  "description": "Zero-dependency Web Cryptography & AI Agent Tooling Suite (AES-256-GCM, RSA-4096, PQC KEM/Sign, stdio MCP Server).",
+  "author": {
+    "name": "PuterVision"
+  },
+  "homepage": "https://putervision.github.io/webcrypt/",
+  "server": {
+    "type": "node",
+    "entry_point": "./bin/webcrypt-mcp.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/bin/webcrypt-mcp.js"],
+      "env": {}
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/putervision/webcrypt.git"
+  }
+}

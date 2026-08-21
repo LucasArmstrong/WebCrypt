@@ -1,6 +1,6 @@
 /**
  * WebCrypt Live Playground & Security Workbench
- * Maintained by PuterVision LLC (https://putervision.com)
+ * Maintained by PuterVision (https://putervision.com)
  */
 
 document.addEventListener("DOMContentLoaded", () => {

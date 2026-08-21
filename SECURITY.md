@@ -4,8 +4,8 @@
 
 | Version         | Supported               |
 | --------------- | ----------------------- |
-| 0.7.0 (Current) | ✅ Active support       |
-| < 0.7.0         | ❌ Legacy / unsupported |
+| 1.0.0 (Current) | ✅ Active support       |
+| < 1.0.0         | ❌ Legacy / unsupported |
 
 ## Reporting a Vulnerability
 
@@ -15,7 +15,7 @@ If you discover a security vulnerability in WebCrypt, please report it responsib
 
 ### How to Report
 
-1. Email / Advisory: Open a private security advisory via [GitHub Security Advisories](https://github.com/putervision/webcrypt/security/advisories/new) or contact [PuterVision LLC](https://putervision.com).
+1. Email / Advisory: Open a private security advisory via [GitHub Security Advisories](https://github.com/putervision/webcrypt/security/advisories/new) or contact [PuterVision](https://putervision.com).
 2. Include:
    - Description of the vulnerability
    - Steps to reproduce
@@ -31,7 +31,7 @@ If you discover a security vulnerability in WebCrypt, please report it responsib
 
 ## Limitation of Liability & Disclaimer of Warranty
 
-WebCrypt is maintained by [PuterVision LLC](https://putervision.com) and provided "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+WebCrypt is maintained by [PuterVision](https://putervision.com) and provided "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
 
 IN NO EVENT SHALL PUTERVISION LLC, ITS AFFILIATES, OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 

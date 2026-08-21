@@ -1,12 +1,16 @@
 // src/WebCryptAsym.js
-// version: 0.8.0
+// version: 1.0.0
 import TimingSafeHelper from "./TimingSafeHelper.js"; // Add timing-safe helper for DoS protection and constant-time comparisons
+import { arrayBufferToBase64, base64ToArrayBuffer } from "./_base64.js";
+import { getCrypto } from "./_crypto.js";
+
+let warnedSHA3Fallback = false;
 
 /**
  * WebCryptAsym — RSA-4096 hybrid asymmetric encryption, digital signatures, and key exchange.
- * Maintained by PuterVision LLC (https://putervision.com).
+ * Maintained by PuterVision (https://putervision.com).
  *
- * DISCLAIMER: Provided "AS IS" without warranty of any kind. PuterVision LLC
+ * DISCLAIMER: Provided "AS IS" without warranty of any kind. PuterVision
  * disclaims all liability for data loss, security breaches, or misuse.
  *
  * Features:
@@ -78,19 +82,7 @@ export class WebCryptAsym {
   }
 
   _getCrypto() {
-    if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.subtle) {
-      return globalThis.crypto;
-    }
-    if (typeof require !== "undefined") {
-      try {
-        const { webcrypto } = require("node:crypto");
-        if (webcrypto && webcrypto.subtle) return webcrypto;
-      } catch (e) {}
-    }
-    if (typeof globalThis !== "undefined" && globalThis.crypto && globalThis.crypto.subtle) {
-      return globalThis.crypto;
-    }
-    throw new Error("Web Crypto API (crypto.subtle) is not available in this environment");
+    return getCrypto();
   }
 
   /**
@@ -135,23 +127,11 @@ export class WebCryptAsym {
   // ────────────────────── Safe Base64 Utilities ──────────────────────
   // Chunked block conversion avoids stack overflow and O(N^2) memory overhead on multi-MB buffers
   _arrayBufferToBase64(buffer) {
-    const bytes = new Uint8Array(buffer);
-    const CHUNK_SIZE = 32768; // 32KB chunks prevent call stack overflow on large buffers
-    let binary = "";
-    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
-      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
-    }
-    return btoa(binary);
+    return arrayBufferToBase64(buffer);
   }
 
   _base64ToArrayBuffer(base64) {
-    let padded = base64;
-    const mod = base64.length % 4;
-    if (mod > 0) {
-      padded += "=".repeat(4 - mod);
-    }
-    const bytes = Uint8Array.from(atob(padded), c => c.charCodeAt(0));
-    return bytes.buffer;
+    return base64ToArrayBuffer(base64);
   }
 
   /**
@@ -394,27 +374,49 @@ export class WebCryptAsym {
     let counter = 0;
     let pendingPromises = [];
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    let buffer = new Uint8Array(0);
 
+    const encryptChunk = plaintextChunk => {
       const iv = new Uint8Array(WebCryptAsym.IV_LENGTH);
       iv.set(baseIv);
-      // Deterministic counter in last 4 bytes ensures unique IV per chunk
       new DataView(iv.buffer).setUint32(WebCryptAsym.IV_LENGTH - 4, counter++, true);
 
       const promise = this._crypto.subtle.encrypt(
         { name: WebCryptAsym.AES_ALGORITHM, iv },
         aesKey,
-        value
+        plaintextChunk
       );
       pendingPromises.push(promise);
+    };
 
-      if (pendingPromises.length >= parallelChunks) {
-        const resolved = await Promise.all(pendingPromises);
-        chunks.push(...resolved);
-        pendingPromises = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      if (buffer.length === 0) {
+        buffer = value instanceof Uint8Array ? value : new Uint8Array(value);
+      } else {
+        const newBuf = new Uint8Array(buffer.length + value.byteLength);
+        newBuf.set(buffer, 0);
+        newBuf.set(value instanceof Uint8Array ? value : new Uint8Array(value), buffer.length);
+        buffer = newBuf;
       }
+
+      while (buffer.length >= WebCryptAsym.CHUNK_SIZE) {
+        const chunk = buffer.subarray(0, WebCryptAsym.CHUNK_SIZE);
+        encryptChunk(chunk);
+        buffer = buffer.subarray(WebCryptAsym.CHUNK_SIZE);
+
+        if (pendingPromises.length >= parallelChunks) {
+          const resolved = await Promise.all(pendingPromises);
+          chunks.push(...resolved);
+          pendingPromises = [];
+        }
+      }
+    }
+
+    if (buffer.length > 0 || counter === 0) {
+      encryptChunk(buffer);
     }
 
     if (pendingPromises.length > 0) {
@@ -446,7 +448,7 @@ export class WebCryptAsym {
       throw new Error("File too large for decryption");
     }
 
-    if (data.length < 4 + 100 + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
+    if (data.length < 4 + 128 + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
 
     const encKeyLen = new DataView(data.buffer).getUint32(0, true);
     if (data.length < 4 + encKeyLen + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
@@ -473,10 +475,11 @@ export class WebCryptAsym {
     let offset = 0;
     let counter = 0;
     let pendingPromises = [];
+    const CIPHERTEXT_CHUNK_SIZE = WebCryptAsym.CHUNK_SIZE + 16;
 
     while (offset < ciphertext.byteLength) {
-      const size = Math.min(WebCryptAsym.CHUNK_SIZE, ciphertext.byteLength - offset);
-      const chunk = ciphertext.slice(offset, offset + size);
+      const size = Math.min(CIPHERTEXT_CHUNK_SIZE, ciphertext.byteLength - offset);
+      const chunk = ciphertext.subarray(offset, offset + size);
 
       const iv = new Uint8Array(WebCryptAsym.IV_LENGTH);
       iv.set(baseIv);
@@ -987,34 +990,38 @@ export class WebCryptAsym {
       const iv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
 
       if (first) {
-        // First frame carries encrypted session key + IV + payload
+        // First frame carries encrypted session key + IV + encrypted payload
         const encSession = new Uint8Array(encryptedSessionKey);
         const header = new Uint8Array(4 + encSession.byteLength + WebCryptAsym.IV_LENGTH);
         new DataView(header.buffer).setUint32(0, encSession.byteLength, true);
         header.set(encSession, 4);
         header.set(iv, 4 + encSession.byteLength);
 
-        const frameData = new Uint8Array(frame.data);
-        const combined = new Uint8Array(header.byteLength + frameData.byteLength);
-        combined.set(header);
-        combined.set(frameData, header.byteLength);
-
-        frame.data = combined;
-        first = false;
-      } else {
-        // Subsequent frames use standard AES-GCM
-        const ciphertext = await this._crypto.subtle.encrypt(
+        const encrypted = await this._crypto.subtle.encrypt(
           { name: WebCryptAsym.AES_ALGORITHM, iv },
           sessionKey,
           frame.data
         );
 
-        const frameData = new Uint8Array(frame.data);
-        const combined = new Uint8Array(iv.byteLength + ciphertext.byteLength);
-        combined.set(iv);
-        combined.set(new Uint8Array(ciphertext), iv.byteLength);
+        const combined = new Uint8Array(header.byteLength + encrypted.byteLength);
+        combined.set(header);
+        combined.set(new Uint8Array(encrypted), header.byteLength);
 
-        frame.data = combined;
+        frame.data = combined.buffer;
+        first = false;
+      } else {
+        // Subsequent frames use standard AES-GCM
+        const encrypted = await this._crypto.subtle.encrypt(
+          { name: WebCryptAsym.AES_ALGORITHM, iv },
+          sessionKey,
+          frame.data
+        );
+
+        const combined = new Uint8Array(iv.byteLength + encrypted.byteLength);
+        combined.set(iv);
+        combined.set(new Uint8Array(encrypted), iv.byteLength);
+
+        frame.data = combined.buffer;
       }
       controller.enqueue(frame);
     };
@@ -1047,23 +1054,14 @@ export class WebCryptAsym {
       const iv = this._crypto.getRandomValues(new Uint8Array(WebCryptAsym.IV_LENGTH));
 
       if (first) {
-        // First frame carries encrypted session key + IV + payload
+        // First frame carries encrypted session key + IV + encrypted payload
         const encSession = new Uint8Array(encryptedSessionKey);
         const header = new Uint8Array(4 + encSession.byteLength + WebCryptAsym.IV_LENGTH);
         new DataView(header.buffer).setUint32(0, encSession.byteLength, true);
         header.set(encSession, 4);
         header.set(iv, 4 + encSession.byteLength);
 
-        const frameData = new Uint8Array(frame.data);
-        const combined = new Uint8Array(header.byteLength + frameData.byteLength);
-        combined.set(header);
-        combined.set(frameData, header.byteLength);
-
-        frame.data = combined;
-        first = false;
-      } else {
-        // Subsequent frames use standard AES-GCM
-        const ciphertext = await this._crypto.subtle.encrypt(
+        const encrypted = await this._crypto.subtle.encrypt(
           { name: WebCryptAsym.AES_ALGORITHM, iv },
           sessionKey,
           frame.data
@@ -1074,12 +1072,30 @@ export class WebCryptAsym {
           onProgress(totalBytes);
         }
 
-        const frameData = new Uint8Array(frame.data);
-        const combined = new Uint8Array(iv.byteLength + ciphertext.byteLength);
-        combined.set(iv);
-        combined.set(new Uint8Array(ciphertext), iv.byteLength);
+        const combined = new Uint8Array(header.byteLength + encrypted.byteLength);
+        combined.set(header);
+        combined.set(new Uint8Array(encrypted), header.byteLength);
 
-        frame.data = combined;
+        frame.data = combined.buffer;
+        first = false;
+      } else {
+        // Subsequent frames use standard AES-GCM
+        const encrypted = await this._crypto.subtle.encrypt(
+          { name: WebCryptAsym.AES_ALGORITHM, iv },
+          sessionKey,
+          frame.data
+        );
+
+        totalBytes += frame.data.byteLength;
+        if (onProgress) {
+          onProgress(totalBytes);
+        }
+
+        const combined = new Uint8Array(iv.byteLength + encrypted.byteLength);
+        combined.set(iv);
+        combined.set(new Uint8Array(encrypted), iv.byteLength);
+
+        frame.data = combined.buffer;
       }
       controller.enqueue(frame);
     };
@@ -1119,28 +1135,49 @@ export class WebCryptAsym {
     const reader = fileOrBlob.stream().getReader();
     let counter = 0;
     let totalBytes = 0;
+    let buffer = new Uint8Array(0);
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
+    const encryptChunk = async plaintextChunk => {
       const iv = new Uint8Array(WebCryptAsym.IV_LENGTH);
       iv.set(baseIv);
-      // Deterministic counter in last 4 bytes ensures unique IV per chunk
       new DataView(iv.buffer).setUint32(WebCryptAsym.IV_LENGTH - 4, counter++, true);
 
       const encrypted = await this._crypto.subtle.encrypt(
         { name: WebCryptAsym.AES_ALGORITHM, iv },
         aesKey,
-        value
+        plaintextChunk
       );
 
-      totalBytes += value.byteLength;
+      totalBytes += plaintextChunk.byteLength;
       if (onProgress) {
         onProgress(totalBytes);
       }
 
       chunks.push(encrypted);
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      if (buffer.length === 0) {
+        buffer = value instanceof Uint8Array ? value : new Uint8Array(value);
+      } else {
+        const newBuf = new Uint8Array(buffer.length + value.byteLength);
+        newBuf.set(buffer, 0);
+        newBuf.set(value instanceof Uint8Array ? value : new Uint8Array(value), buffer.length);
+        buffer = newBuf;
+      }
+
+      while (buffer.length >= WebCryptAsym.CHUNK_SIZE) {
+        const chunk = buffer.subarray(0, WebCryptAsym.CHUNK_SIZE);
+        await encryptChunk(chunk);
+        buffer = buffer.subarray(WebCryptAsym.CHUNK_SIZE);
+      }
+    }
+
+    if (buffer.length > 0 || counter === 0) {
+      await encryptChunk(buffer);
     }
 
     const filename = (fileOrBlob.name || "encrypted") + ".asym-encrypted";
@@ -1169,7 +1206,7 @@ export class WebCryptAsym {
     if (data.length > WebCryptAsym.MAX_ENCRYPTED_DATA_SIZE) {
       throw new Error("File too large for decryption");
     }
-    if (data.length < 4 + 100 + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
+    if (data.length < 4 + 128 + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
 
     const encKeyLen = new DataView(data.buffer).getUint32(0, true);
     if (data.length < 4 + encKeyLen + WebCryptAsym.IV_LENGTH) throw new Error("Decryption failed");
@@ -1196,10 +1233,11 @@ export class WebCryptAsym {
     let offset = 0;
     let counter = 0;
     let totalBytes = 0;
+    const CIPHERTEXT_CHUNK_SIZE = WebCryptAsym.CHUNK_SIZE + 16;
 
     while (offset < ciphertext.byteLength) {
-      const size = Math.min(WebCryptAsym.CHUNK_SIZE, ciphertext.byteLength - offset);
-      const chunk = ciphertext.slice(offset, offset + size);
+      const size = Math.min(CIPHERTEXT_CHUNK_SIZE, ciphertext.byteLength - offset);
+      const chunk = ciphertext.subarray(offset, offset + size);
 
       const iv = new Uint8Array(WebCryptAsym.IV_LENGTH);
       iv.set(baseIv);
@@ -1211,7 +1249,7 @@ export class WebCryptAsym {
         chunk
       );
 
-      totalBytes += size;
+      totalBytes += decrypted.byteLength;
       if (onProgress) {
         onProgress(totalBytes);
       }
@@ -1333,37 +1371,6 @@ export class WebCryptAsym {
     return this._crypto.getRandomValues(new Uint8Array(length));
   }
 
-  /**
-   * Implement timing-safe comparison to prevent timing attacks
-   * @param {Uint8Array} a - First array to compare
-   * @param {Uint8Array} b - Second array to compare
-   * @returns {boolean} Whether the arrays are equal
-   */
-  _timingSafeEqual(a, b) {
-    if (a.byteLength !== b.byteLength) {
-      return false;
-    }
-
-    let result = 0;
-    for (let i = 0; i < a.byteLength; i++) {
-      result |= a[i] ^ b[i];
-    }
-
-    return result === 0;
-  }
-
-  /**
-   * Enhanced error handling to prevent timing attacks
-   * @param {string} message - Error message
-   * @throws {Error} The error with consistent response time
-   */
-  _throwTimingSafeError(message) {
-    // Use a timing-safe approach to avoid leaking information through timing
-    const dummy = new Uint8Array(100);
-    this._crypto.getRandomValues(dummy);
-    throw new Error(message);
-  }
-
   // ════════════════════════════ Post-Quantum Features ════════════════════════════
 
   /**
@@ -1387,16 +1394,16 @@ export class WebCryptAsym {
       keyLength = 256,
     } = options;
 
-    const encoder = new TextEncoder();
-    const keyMaterial = await this._crypto.subtle.importKey(
-      "raw",
-      encoder.encode(password),
-      { name: "Argon2" },
-      false,
-      ["deriveBits", "deriveKey"]
-    );
-
     try {
+      const encoder = new TextEncoder();
+      const keyMaterial = await this._crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        { name: "Argon2" },
+        false,
+        ["deriveBits", "deriveKey"]
+      );
+
       // Try to use native Argon2 if available (Node.js 20+, some browsers)
       return await this._crypto.subtle.deriveKey(
         {
@@ -1413,7 +1420,6 @@ export class WebCryptAsym {
       );
     } catch (e) {
       // Fallback: Use PBKDF2 with much higher iteration count
-      console.warn("Argon2 not available; using PBKDF2 with 1M iterations as fallback");
       return await this.deriveKeyPBKDF2(password, salt, 1000000, "SHA-256", keyLength);
     }
   }
@@ -1424,17 +1430,46 @@ export class WebCryptAsym {
    * Falls back to SHA-256 if SHA-3 is not available in the environment.
    *
    * @param {string} password - Password to derive from
-   * @param {number} [iterations=100000] - Number of hash iterations (50000+ recommended)
-   * @param {string} [algorithm='SHA3-256'] - Hash algorithm: 'SHA3-256', 'SHA3-384', 'SHA3-512'
+   * @param {Uint8Array|number} [saltOrIterations=10000] - Salt (Uint8Array) or legacy iterations (number)
+   * @param {number|string} [iterationsOrAlgorithm=10000] - Number of hash iterations or algorithm
+   * @param {string} [maybeAlgorithm='SHA3-256'] - Hash algorithm: 'SHA3-256', 'SHA3-384', 'SHA3-512'
    * @returns {Promise<CryptoKey>} Derived AES-256 key for encrypt/decrypt
    */
-  async deriveKeySHA3(password, iterations = 100000, algorithm = "SHA3-256") {
+  async deriveKeySHA3(
+    password,
+    saltOrIterations = 10000,
+    iterationsOrAlgorithm = "SHA3-256",
+    maybeAlgorithm = "SHA3-256"
+  ) {
     const encoder = new TextEncoder();
     const passwordBytes = encoder.encode(password);
 
-    // Generate deterministic salt from password (same password → same salt)
-    const saltHash = await this._crypto.subtle.digest("SHA-256", passwordBytes);
-    const salt = new Uint8Array(saltHash).slice(0, 16);
+    let salt;
+    let iterations = 10000;
+    let algorithm = "SHA3-256";
+
+    if (saltOrIterations instanceof Uint8Array || typeof saltOrIterations === "string") {
+      salt =
+        typeof saltOrIterations === "string"
+          ? new TextEncoder().encode(saltOrIterations)
+          : saltOrIterations;
+      if (typeof iterationsOrAlgorithm === "number") {
+        iterations = iterationsOrAlgorithm;
+        algorithm = maybeAlgorithm || "SHA3-256";
+      } else if (typeof iterationsOrAlgorithm === "string") {
+        algorithm = iterationsOrAlgorithm;
+      }
+    } else if (typeof saltOrIterations === "number") {
+      iterations = saltOrIterations;
+      if (typeof iterationsOrAlgorithm === "string") {
+        algorithm = iterationsOrAlgorithm;
+      }
+      const saltHash = await this._crypto.subtle.digest("SHA-256", passwordBytes);
+      salt = new Uint8Array(saltHash).slice(0, 16);
+    } else {
+      const saltHash = await this._crypto.subtle.digest("SHA-256", passwordBytes);
+      salt = new Uint8Array(saltHash).slice(0, 16);
+    }
 
     let material = new Uint8Array(passwordBytes.byteLength + salt.byteLength);
     material.set(passwordBytes);
@@ -1449,8 +1484,10 @@ export class WebCryptAsym {
       try {
         material = new Uint8Array(await this._crypto.subtle.digest(algorithm, hashInput));
       } catch (e) {
-        // SHA-3 not available; fall back to SHA-256
-        console.warn("SHA-3 not available; falling back to SHA-256");
+        if (!warnedSHA3Fallback && typeof console !== "undefined" && console.warn) {
+          console.warn("SHA-3 not available; falling back to SHA-256");
+          warnedSHA3Fallback = true;
+        }
         material = new Uint8Array(await this._crypto.subtle.digest("SHA-256", hashInput));
       }
     }

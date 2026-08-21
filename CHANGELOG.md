@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-08-21
+
+### Major Milestone Release: AI Agent MCP Server, Multi-IDE Integration, Deterministic Streaming & Global Tooling Suite
+
+- **Native Model Context Protocol (MCP) Server**: Zero-dependency stdio JSON-RPC 2.0 server (`npx webcrypt mcp` / `webcrypt-mcp`) exposing 6 core cryptographic tools to AI coding agents:
+  - `encrypt_payload`: Symmetric (AES-256-GCM), asymmetric (RSA-4096), and JSON data encryption.
+  - `decrypt_payload`: Plaintext and structured JSON decryption.
+  - `manage_keys`: JWK key generation for RSA-4096, ECDH (P-256/P-384), HMAC, and high-entropy passwords.
+  - `crypto_hash`: Cryptographic digests (SHA-256, SHA-512, SHA-3) in hex and base64.
+  - `sign_verify`: ECDSA, RSA-PSS, HMAC, and HMAC-SHA3 signing & verification.
+  - `pqc_kem_sign`: Post-quantum Kyber KEM, Dilithium lattice signatures, and hybrid classical+PQC key encapsulation.
+- **Automated Project Scaffolding (`webcrypt init [dir]`)**: Auto-scaffolds `.agents/skills/webcrypt-mcp/SKILL.md`, `.cursor/mcp.json`, `.vscode/mcp.json`, and updates rule markers in `AGENTS.md`, `.cursorrules`, `.windsurfrules`, `.gemini/instructions.md`, and `CLAUDE.md`.
+- **Global Project Registry (`~/.webcrypt/projects.json`)**: Multi-project tracking and batch management with `webcrypt init-global [--scan]`, `webcrypt doctor-global [--clean-stale]`, and `webcrypt projects`.
+- **Environment & Configuration Diagnostics (`webcrypt doctor [dir]`)**: Audits Web Crypto API runtime availability, agent skills, and editor configuration health.
+- **Deterministic Multi-Chunk AES-GCM Framing (Bug C1 Fixed)**: Slices plaintext into deterministic 8MB blocks (CHUNK_SIZE = 8,388,608 bytes) and ciphertext into 8MB + 16B (8,388,624 bytes) frames, fixing streaming encryption for files > 8MB with constant memory usage.
+- **Kyber & Hybrid KEM Roundtrips (Bug C2 Fixed)**: Embedded ephemeral nonce in ciphertext and public key in private key tail, enabling byte-for-byte matching shared secrets across classical, post-quantum, and hybrid modes.
+- **Argon2 PBKDF2 Fallback (Bug H1 Fixed)**: Wrapped `importKey` in `deriveKeyArgon2Enhanced` inside `try/catch` to cleanly fall back to 1M iteration PBKDF2 in runtimes lacking native Argon2.
+- **WebRTC Transform Encryption (Bug H3 Fixed)**: Encrypted first frame payload with `sessionKey` in `_createPostQuantumHybridEncryptTransform` and `createEncryptTransformWithProgress`, ensuring standard `ArrayBuffer` return types.
+- **Centralized Subsystem Utilities**:
+  - `src/_crypto.js`: Unified SubtleCrypto detection for Browser, Web Workers, Node.js 18+, Bun, and edge runtimes.
+  - `src/_base64.js`: Stack-safe 32KB chunked Base64 encoding/decoding and strict format validation.
+- **Expanded Test Matrix**: 30 test suites / 247 tests passing (100% pass rate) with ~94% overall code coverage.
+- **PuterVision Triple Memory Synergy**: Standardized integration between `state-memory-mcp` (workflow tracking), `vision-memory-mcp` (visual cache), and `webcrypt` (cryptographic vault).
+
 ## [0.8.0] - 2026-08-11
 
 ### Minor Feature Release: API Documentation Overhaul, Asymmetric Streaming & Edge Testing
@@ -86,7 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Webpage Expansion & Documentation
 
 - **Expanded Webpage**: Transformed `docs/index.html` into a rich documentation site featuring release badges, comprehensive code examples (Symmetric, Asymmetric RSA-4096, WebRTC E2EE, HMAC, PQC stubs), a complete API reference table, and a dedicated Limitation of Liability section.
-- **PuterVision LLC Website Linking**: Updated all PuterVision LLC brand labels and links to point directly to [https://putervision.com](https://putervision.com).
+- **PuterVision Website Linking**: Updated all PuterVision brand labels and links to point directly to [https://putervision.com](https://putervision.com).
 - **Author Scrub**: Scrubbed personal author references across package metadata, LICENSE, documentation, code, and website files.
 
 ## [0.5.5] - 2026
