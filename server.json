@@ -12,7 +12,9 @@
     {
       "src": "https://putervision.github.io/webcrypt/webcrypt-icon.png",
       "mimeType": "image/png",
-      "sizes": ["512x512"]
+      "sizes": [
+        "512x512"
+      ]
     }
   ],
   "repository": {
@@ -20,6 +22,7 @@
     "url": "https://github.com/putervision/webcrypt",
     "source": "github"
   },
+  "mcpName": "io.github.putervision/webcrypt",
   "bugs": {
     "url": "https://github.com/putervision/webcrypt/issues"
   },
@@ -32,7 +35,9 @@
         "type": "stdio"
       },
       "executable": "webcrypt",
-      "args": ["mcp"]
+      "args": [
+        "mcp"
+      ]
     }
   ]
 }
