@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "webcrypt",
   "version": "1.0.0",
-  "description": "Zero-dependency Web Cryptography & AI Agent Tooling Suite (AES-256-GCM, RSA-4096, PQC KEM/Sign, stdio MCP Server).",
+  "description": "Zero-dependency Web Crypto & AI Agent MCP Server (AES-256-GCM, RSA-4096, PQC, Signatures).",
   "author": {
     "name": "PuterVision"
   },
