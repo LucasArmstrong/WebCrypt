@@ -55,8 +55,8 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "webcrypt": "./bin/webcrypt.js",
-    "webcrypt-mcp": "./bin/webcrypt-mcp.js"
+    "webcrypt": "bin/webcrypt.js",
+    "webcrypt-mcp": "bin/webcrypt-mcp.js"
   },
   "sideEffects": false,
   "engines": {
